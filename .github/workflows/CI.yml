@@ -32,6 +32,11 @@ jobs:
             ${{ runner.os }}-test-${{ env.cache-name }}-
             ${{ runner.os }}-test-
             ${{ runner.os }}-
+      - run: |
+          julia --project=. -e '
+            ENV["PYTHON"] = ""
+            using Pkg
+            Pkg.build("PyCall")'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
   docs:
@@ -42,6 +47,11 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1'
+      - run: |
+          julia --project=docs -e '
+            ENV["PYTHON"] = ""
+            using Pkg
+            Pkg.build("PyCall")'
       - run: |
           julia --project=docs -e '
             using Pkg
