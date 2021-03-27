@@ -20,4 +20,5 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/stillyslalom/PyThermo.jl",
+    devbranch="main",
 )
