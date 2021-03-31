@@ -54,6 +54,14 @@ julia> SF6.phase # much better!
 "s"
 ```
 
+### Installation
+PyThermo.jl is registered in Julia's general package repository and can be installed with the package manager. [Conda.jl](https://github.com/JuliaPy/Conda.jl) is used to automatically install all Python dependencies to a Julia-specific miniconda environment unless otherwise specified.
+```
+(v1.6) pkg> add PyThermo
+   Resolving package versions...
+   Installed PyThermo ─ v0.1.1
+```
+
 ### Future development
 
 - [ ] Add `Unitful` accessors for more properties
