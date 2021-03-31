@@ -100,7 +100,7 @@ Base.show(io::IO, species::Species) = @printf(io, "Species(%s, %0.1f K, %0.3e Pa
     Mixture(chemnames::Vector{String}; kwargs...)
     Mixture(chemnames::Vector{Pair{String, Float64}}, kwargs...)
 
-Creates a Mixture object which contains basic information such as
+Creates a `Mixture` object which contains basic information such as
 molecular weight and the structure of the species, as well as thermodynamic
 and transport properties as a function of temperature and pressure.
 
@@ -128,7 +128,7 @@ julia> soundspeed(air)
 struct Mixture <: Chemical
     o::PyObject
 end
-Mixture(chemnames::Vector{String}; kwargs...) = Mixture(PY_CHEM.Mixture(chemnames; kwargs...))
+Mixture(chemnames::Vector{String}; kwargs...) = Mixture(PY_CHEM.Mixture(chemnames; _SI_TP(kwargs)...))
 
 function Mixture(chems::Vector{Pair{String, Float64}}; kwargs...)
     Mixture(first.(chems); kwargs..., zs = last.(chems))
