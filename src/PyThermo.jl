@@ -6,7 +6,7 @@ using Unitful
 
 import Base: convert, ==, isequal, hash, getindex, setindex!, haskey, keys, show
 
-export Thermo
+export Thermo, ShockTube
 export Species, Mixture
 export isentropic_exponent, temperature, pressure, density, molar_density, R_specific, soundspeed
 
@@ -141,8 +141,13 @@ end
 # Mixture(args...; kwargs...) = Mixture([args...], kwargs...)
 
 function composition_string(mix)
+    species_str = try
+        mix.components
+    catch
+        mix.names
+    end
     s = "{"
-    for (species, χ) in zip(mix.components, mix.zs)
+    for (species, χ) in zip(species_str, mix.zs)
         s *= @sprintf("%s: %0.3g, ", species, χ)
     end
     s[1:end-2] * "}"
@@ -178,4 +183,5 @@ isentropic_exponent(c::Chemical)  = c.isentropic_exponent
 R_specific(c::Chemical)  = c.R_specific * u"J/(kg*K)"
 soundspeed(c::Chemical) = sqrt(isentropic_exponent(c) * R_specific(c) * temperature(c)) |> u"m/s"  
 
+include("ShockTube.jl")
 end
