@@ -63,7 +63,7 @@ julia> He.T = 30u"K"
 30 K
 
 julia> density(He)
-1.623503007493497 kg m^-3
+1.6235030074934973 kg m^-3
 ```
 
 A wide variety of unexported properties can be accessed from the underlying Python object:
@@ -122,7 +122,7 @@ julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
 Mixture({N2: 0.78, O2: 0.21, Ar: 0.01}, 298.1 K, 1.013e+05 Pa)
 
 julia> soundspeed(air)
-346.14659461295173 m s^-1
+346.1466532754559 m s^-1
 ```
 """
 struct Mixture <: Chemical
@@ -142,7 +142,7 @@ end
 
 function composition_string(mix)
     species_str = try
-        mix.components
+        mix.IDs
     catch
         mix.names
     end
