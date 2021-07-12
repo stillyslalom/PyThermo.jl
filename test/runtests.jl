@@ -2,12 +2,23 @@ using PyThermo
 using Test
 using PyThermo.ShockTube: shockcalc
 using Unitful
+using Conda
 
 @testset "PyThermo.jl" begin
-    SF6 = Species("SF6")
-    @test isapprox(ustrip(density(SF6)), 6.0383, rtol=2e-3)
-    SF6.calculate(T = 500)
-    @test isapprox(ustrip(density(SF6)), 3.5657, rtol=2e-3)
+    @test Conda.version("thermo") <= v"0.1.40"
+
+    @testset "Species" begin
+        SF6 = Species("SF6")
+        @test isapprox(ustrip(density(SF6)), 6.0383, rtol=2e-3)
+        SF6.calculate(T = 500)
+        @test isapprox(ustrip(density(SF6)), 3.5657, rtol=2e-3)
+    end
+    @testset "Mixture" begin
+        HeAce = Mixture(["Helium" => 0.95, "Acetone" => 0.05])
+        ρ_HeAce = HeAce.rho
+        @test !isnothing(ρ_HeAce)
+        @test isapprox(ρ_HeAce, 0.2747138795604815, rtol=2e-3)
+    end
 end
 
 @testset "ShockTube.jl" begin
