@@ -187,4 +187,10 @@ R_specific(c::Chemical)  = c.R_specific * u"J/(kg*K)"
 soundspeed(c::Chemical) = sqrt(isentropic_exponent(c) * R_specific(c) * temperature(c)) |> u"m/s"  
 
 include("ShockTube.jl")
+
+if ccall(:jl_generating_output, Cint, ()) == 1
+    __init__()
+    ShockTube.shockcalc(Species("N2"), Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01]), 1.8)
 end
+
+end # module

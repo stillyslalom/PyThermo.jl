@@ -51,14 +51,14 @@ struct ShockCalc{DR<:PyThermo.Chemical,DV<:PyThermo.Chemical,U<:Unitful.Velocity
 end
 
 function Base.show(io::IO, sc::ShockCalc)
-    ush(u) = @sprintf("%0.4g", ustrip(u))
-    printstate(s) = join((ush(uconvert(u"MPa", pressure(s))),
-                          ush(uconvert(u"K", temperature(s))),
-                          ush(uconvert(u"kg/m^3", density(s))),
-                          ush(uconvert(u"m/s", soundspeed(s)))), " | ")
+    ush(u, val) = @sprintf("%0.4g", ustrip(u, val))
+    printstate(s) = join((ush(u"MPa", pressure(s)),
+                          ush(u"K", temperature(s)),
+                          ush(u"kg/m^3", density(s)),
+                          ush(u"m/s", soundspeed(s))), " | ")
     display(Markdown.parse("""
-    | Region      | Pressure [MPa] | Temperature [K] | Density [kg/m³] | Sound speed [m/s] |
-    |:----------- | -------------- | --------------- | --------------- | ----------------- |
+    | Region      |  P [MPa]  | T [K] | ρ [kg/m³] | cₛ [m/s] |
+    |:----------- | :------------: | :-------------: | :-------------: | :---------------: |
     | Driver      | $(printstate(sc.driver)) |
     | Driven      | $(printstate(sc.driven)) |
     | Shocked     | $(printstate(sc.shocked)) |
@@ -67,7 +67,7 @@ function Base.show(io::IO, sc::ShockCalc)
     println()
     println("Driver gas: ", PyThermo.composition_string(sc.driver))
     println("Driven gas: ", PyThermo.composition_string(sc.driven))
-    println("Post-shock velocity: ", ush(sc.u2), "m/s")
+    print("Post-shock velocity: ", ush(u"m/s", sc.u2), " m/s")
 end
 
 function shockcalc!(driver, driven, Ms)
