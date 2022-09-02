@@ -1,10 +1,11 @@
-
 module ShockTube
 
 using ..PyThermo
 using Unitful
+using Markdown
+using Printf
 
-export shockjump!, shockjump, driverpressure!, driverpressure, shockcalc!, shockcalc
+export shockjump!, shockjump, driverpressure!, driverpressure, shockcalc!, shockcalc, ShockCalc
 
 γ(f::PyThermo.Chemical)  = isentropic_exponent(f)
 
@@ -40,11 +41,41 @@ function shockreflect!(shocked, Ms)
 end
 shockreflect(shocked, Ms) = shockreflect!(copy(shocked), Ms)
 
+struct ShockCalc{DR<:PyThermo.Chemical,DV<:PyThermo.Chemical,U<:Unitful.Velocity}
+    driver::DR
+    driven::DV
+    shocked::DV
+    reflected::DV
+    Ms::Float64
+    u2::U
+end
+
+function Base.show(io::IO, sc::ShockCalc)
+    ush(u) = @sprintf("%0.4g", ustrip(u))
+    printstate(s) = join((ush(uconvert(u"MPa", pressure(s))),
+                          ush(uconvert(u"K", temperature(s))),
+                          ush(uconvert(u"kg/m^3", density(s))),
+                          ush(uconvert(u"m/s", soundspeed(s)))), " | ")
+    display(Markdown.parse("""
+    | Region      | Pressure [MPa] | Temperature [K] | Density [kg/m³] | Sound speed [m/s] |
+    |:----------- | -------------- | --------------- | --------------- | ----------------- |
+    | Driver      | $(printstate(sc.driver)) |
+    | Driven      | $(printstate(sc.driven)) |
+    | Shocked     | $(printstate(sc.shocked)) |
+    | Reflected   | $(printstate(sc.reflected)) |
+    """))
+    println()
+    println("Driver gas: ", PyThermo.composition_string(sc.driver))
+    println("Driven gas: ", PyThermo.composition_string(sc.driven))
+    println("Post-shock velocity: ", ush(sc.u2), "m/s")
+end
+
 function shockcalc!(driver, driven, Ms)
     shocked, u2 = shockjump(driven, Ms)
     driverpressure!(driver, driven, Ms)
     reflected, _ = shockreflect(shocked, Ms)
-    return (driver = driver, driven = driven, shocked=shocked, reflected=reflected, u2=u2)
+    # return (driver = driver, driven = driven, shocked=shocked, reflected=reflected, u2=u2)
+    return ShockCalc(driver, driven, shocked, reflected, Ms, u2)
 end
 shockcalc(driver, driven, Ms) = shockcalc!(copy(driver), driven, Ms)
 

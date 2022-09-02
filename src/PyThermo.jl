@@ -146,12 +146,15 @@ function composition_string(mix)
     catch
         mix.names
     end
-    s = "{"
-    for (species, χ) in zip(species_str, mix.zs)
-        s *= @sprintf("%s: %0.3g, ", species, χ)
-    end
-    s[1:end-2] * "}"
+    # s = ""
+    # for (species, χ) in zip(species_str, mix.zs)
+    #     s *= @sprintf("%s: %0.3g, ", species, χ)
+    # end
+    # s[1:end-2] * "}"
+    join([@sprintf("%0.3g%s %s", 100χ, '%', species) for (species, χ) in zip(species_str, mix.zs)], ", ")
 end
+composition_string(s::Species) = s.name
+
 Base.show(io::IO, mix::Mixture) = @printf(io, "Mixture(%s, %0.1f K, %0.3e Pa)", composition_string(mix), mix.T, mix.P)
 
 PyObject(c::Chemical) = getfield(c, :o)
