@@ -1,6 +1,6 @@
 module PyThermo
 
-using PyCall 
+using PythonCall
 using Printf
 using Unitful
 
@@ -50,7 +50,7 @@ P : pressure of the chemical (default 101325 Pa)
 
 Examples
 --------
-```jldoctest
+```jldoctest pythermo; setup = :(using PyThermo)
 julia> He = Species("He")
 Species(He, 298.1 K, 1.013e+05 Pa)
 
@@ -63,7 +63,7 @@ julia> He.T = 30u"K"
 30 K
 
 julia> density(He)
-1.6235030074934973 kg m^-3
+1.623503007493497 kg m^-3
 ```
 
 A wide variety of unexported properties can be accessed from the underlying Python object:
@@ -89,7 +89,7 @@ Carcinogen_sources                S_int_l_Tm_to_Tb                   __setattr__
 ```
 """
 struct Species <: Chemical
-    o::PyObject
+    o::Py
 end
 Species(chemname::String; kwargs...) = Species(PY_CHEM.Chemical(chemname; _SI_TP(kwargs)...))
 
@@ -117,16 +117,16 @@ The composition can also be specified by providing a vector of `"ID" => molefrac
 
 Examples
 --------
-```jldoctest
+```jldoctest; setup = :(using PyThermo)
 julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
-Mixture({N2: 0.78, O2: 0.21, Ar: 0.01}, 298.1 K, 1.013e+05 Pa)
+Mixture(78% nitrogen, 21% oxygen, 1% argon, 298.1 K, 1.013e+05 Pa)
 
 julia> soundspeed(air)
-346.1466532754559 m s^-1
+346.14659461295173 m s^-1
 ```
 """
 struct Mixture <: Chemical
-    o::PyObject
+    o::Py
 end
 Mixture(chemnames::Vector{String}; kwargs...) = Mixture(PY_CHEM.Mixture(chemnames; _SI_TP(kwargs)...))
 
@@ -157,24 +157,24 @@ composition_string(s::Species) = s.name
 
 Base.show(io::IO, mix::Mixture) = @printf(io, "Mixture(%s, %0.1f K, %0.3e Pa)", composition_string(mix), mix.T, mix.P)
 
-PyObject(c::Chemical) = getfield(c, :o)
-convert(::Type{T}, o::PyCall.PyObject) where {T <: Chemical} = T(o)
-==(c1::Chemical, c2::Chemical) = PyObject(c1) == PyObject(c2)
-hash(c::Chemical) = hash(PyObject(c))
-Base.copy(c::T) where {T <: Chemical} = T(PY_COPY.copy(PyObject(c)))
+Py(c::Chemical) = getfield(c, :o)
+convert(::Type{T}, o::PythonCall.Py) where {T <: Chemical} = T(o)
+==(c1::Chemical, c2::Chemical) = Py(c1) == Py(c2)
+hash(c::Chemical) = hash(Py(c))
+Base.copy(c::T) where {T <: Chemical} = T(PY_COPY.copy(Py(c)))
 
-Base.Docs.doc(c::Chemical) = Base.Docs.doc(PyObject(c))
-Base.Docs.Binding(c::Chemical, s::Symbol) = Base.Docs.Binding(PyObject(c), s)
+Base.Docs.doc(c::Chemical) = Base.Docs.doc(Py(c))
+Base.Docs.Binding(c::Chemical, s::Symbol) = Base.Docs.Binding(Py(c), s)
 
-Base.getproperty(c::Chemical, s::Symbol) = getproperty(PyObject(c), s)
-Base.setproperty!(c::Chemical, s::Symbol, x) = setproperty!(PyObject(c), s, x)
-Base.hasproperty(c::Chemical, s::Symbol) = hasproperty(PyObject(c), s)
-Base.propertynames(c::Chemical) = propertynames(PyObject(c))
-haskey(c::Chemical, x) = haskey(PyObject(c), x)
+Base.getproperty(c::Chemical, s::Symbol) = pyconvert(Any, getproperty(Py(c), s))
+Base.setproperty!(c::Chemical, s::Symbol, x) = setproperty!(Py(c), s, x)
+Base.hasproperty(c::Chemical, s::Symbol) = hasproperty(Py(c), s)
+Base.propertynames(c::Chemical) = propertynames(Py(c))
+haskey(c::Chemical, x) = haskey(Py(c), x)
 
 # Strip units for unitful `setproperty`
-Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Temperature) = setproperty!(PyObject(c), s, _unit(T, u"K"))
-Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Pressure) = setproperty!(PyObject(c), s, _unit(T, u"Pa"))
+Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Temperature) = setproperty!(Py(c), s, _unit(T, u"K"))
+Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Pressure) = setproperty!(Py(c), s, _unit(T, u"Pa"))
 
 
 # Thermodynamic property accessors
@@ -190,7 +190,7 @@ include("ShockTube.jl")
 
 if ccall(:jl_generating_output, Cint, ()) == 1
     __init__()
-    ShockTube.shockcalc(Species("N2"), Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01]), 1.8)
+    # ShockTube.shockcalc(Species("N2"), Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01]), 1.8)
 end
 
 end # module

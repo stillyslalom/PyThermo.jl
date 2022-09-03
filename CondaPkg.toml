@@ -1,0 +1,4 @@
+
+[deps.thermo]
+channel = "conda-forge"
+version = "0.1.40"
