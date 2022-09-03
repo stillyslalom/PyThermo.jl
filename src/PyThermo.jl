@@ -50,7 +50,7 @@ P : pressure of the chemical (default 101325 Pa)
 
 Examples
 --------
-```jldoctest
+```jldoctest pythermo; setup = :(using PyThermo)
 julia> He = Species("He")
 Species(He, 298.1 K, 1.013e+05 Pa)
 
@@ -63,7 +63,7 @@ julia> He.T = 30u"K"
 30 K
 
 julia> density(He)
-1.6235030074934973 kg m^-3
+1.623503007493497 kg m^-3
 ```
 
 A wide variety of unexported properties can be accessed from the underlying Python object:
@@ -117,12 +117,12 @@ The composition can also be specified by providing a vector of `"ID" => molefrac
 
 Examples
 --------
-```jldoctest
+```jldoctest; setup = :(using PyThermo)
 julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
-Mixture({N2: 0.78, O2: 0.21, Ar: 0.01}, 298.1 K, 1.013e+05 Pa)
+Mixture(78% nitrogen, 21% oxygen, 1% argon, 298.1 K, 1.013e+05 Pa)
 
 julia> soundspeed(air)
-346.1466532754559 m s^-1
+346.14659461295173 m s^-1
 ```
 """
 struct Mixture <: Chemical
