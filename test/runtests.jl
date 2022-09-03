@@ -2,10 +2,8 @@ using PyThermo
 using Test
 using PyThermo.ShockTube: shockcalc
 using Unitful
-using Conda
 
 @testset "PyThermo.jl" begin
-    @test Conda.version("thermo") <= v"0.1.40"
 
     @testset "Species" begin
         SF6 = Species("SF6")
