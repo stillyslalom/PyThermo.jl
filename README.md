@@ -22,7 +22,7 @@ If left unspecified, the pressure and temperature are set to STP. if given as `F
 julia> using Unitful
 
 julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01], P = 1u"atm")
-Mixture({N2: 0.78, O2: 0.21, Ar: 0.01}, 298.1 K, 1.013e+05 Pa)
+Mixture(78% nitrogen, 21% oxygen, 1% argon, 298.1 K, 1.013e+05 Pa)
 
 julia> air.Cp
 1004.1326426200408
@@ -43,7 +43,7 @@ julia> SF6.T = 20u"K"
 20 K
 
 julia> density(SF6)
-181.67446044245906 kg m^-
+181.67446044245906 kg m^-3
 
 julia> SF6.phase # that's not right!
 "g"
@@ -55,14 +55,44 @@ julia> SF6.phase # much better!
 ```
 
 ### Installation
-PyThermo.jl is registered in Julia's general package repository and can be installed with the package manager. [Conda.jl](https://github.com/JuliaPy/Conda.jl) is used to automatically install all Python dependencies to a Julia-specific miniconda environment unless otherwise specified.
+PyThermo.jl is registered in Julia's general package repository and can be installed with the package manager. [CondaPkg.jl](https://github.com/cjdoris/CondaPkg.jl) is used to automatically install all Python dependencies to a PyThermo-specific Conda environment unless otherwise specified (see CondaPkg docs for details).
 ```
-(v1.6) pkg> add PyThermo
+(v1.8) pkg> add PyThermo
    Resolving package versions...
-   Installed PyThermo ─ v0.1.1
+   Installed PyThermo ─ v0.2.0
 ```
 
 ### Future development
 
 - [ ] Add `Unitful` accessors for more properties
 - [ ] Use `missing` instead of `nothing` for missing properties
+
+### Easter eggs
+PyThermo includes a sub-module for 1D gas dynamics capable of calculating shock properties for gas species and mixtures.
+```julia
+julia> using PyThermo, PyThermo.ShockTube, Unitful
+
+julia> driver = Species("He")
+Species(He, 298.1 K, 1.013e+05 Pa)
+
+julia> driven = Mixture(["He" => 0.95, "acetone" => 0.05], T = 18u"°C", P = 85u"kPa")
+Mixture(95% helium, 5% acetone, 291.1 K, 8.500e+04 Pa)
+
+julia> shockjump(driven, 2.2) # find shock jump conditions
+(Mixture(95% helium, 5% acetone, 623.7 K, 4.819e+05 Pa), 1023.9438673559401 m s^-1)
+
+julia> shockcalc(driver, driven, 2.2) # calculate shock states for M=2.2
+  Region    P [MPa] T [K] ρ [kg/m³] cₛ [m/s]
+  ––––––––– ––––––– ––––– ––––––––– ––––––––
+  Driver     3.732  298.1   5.92      1016
+  Driven     0.085  291.1  0.2355    748.1
+  Shocked   0.4819  623.7  0.6231     1066  
+  Reflected  1.754  1003    1.408     1332
+
+Driver gas: helium
+Driven gas: 95% helium, 5% acetone
+Post-shock velocity: 1024 m/s
+
+julia> density(ans.shocked) / density(ans.driven)
+2.64075735975203
+```
