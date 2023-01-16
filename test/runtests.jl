@@ -28,4 +28,6 @@ end
     @test isapprox(ustrip(soundspeed(st.reflected)), 544.5317089952606, rtol=5e-3)
 end
 
-@testset "Aqua" Aqua.test_all(PyThermo; ambiguities=false)
+@testset "Aqua" begin
+    Aqua.test_all(PyThermo; ambiguities=false)
+end
