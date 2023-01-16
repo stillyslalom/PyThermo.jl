@@ -3,3 +3,4 @@
 /docs/Manifest.toml
 /deps/build.log
 .CondaPkg/
+test/Manifest.toml

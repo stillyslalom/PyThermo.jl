@@ -2,6 +2,7 @@ using PyThermo
 using Test
 using PyThermo.ShockTube: shockcalc
 using Unitful
+using Aqua
 
 @testset "PyThermo.jl" begin
 
@@ -26,3 +27,5 @@ end
     @test isapprox(ustrip(density(st.shocked)), 3.3867027987446874, rtol=2e-3)
     @test isapprox(ustrip(soundspeed(st.reflected)), 544.5317089952606, rtol=5e-3)
 end
+
+@testset "Aqua" Aqua.test_all(PyThermo; ambiguities=false)
