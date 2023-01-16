@@ -3,6 +3,7 @@ module PyThermo
 using PythonCall
 using Printf
 using Unitful
+using Pkg
 
 import Base: convert, ==, isequal, hash, getindex, setindex!, haskey, keys, show
 
