@@ -17,6 +17,9 @@ using Aqua
         ρ_HeAce = HeAce.rho
         @test !isnothing(ρ_HeAce)
         @test isapprox(ρ_HeAce, 0.2747138795604815, rtol=3e-3)
+
+        # test mixture display for the case where mole fractions do not sum to 1
+        @test occursin("Mixture", repr(Mixture(["N2" => 1.0, "Acetone" => 0.1])))
     end
 end
 

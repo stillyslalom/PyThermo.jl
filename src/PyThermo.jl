@@ -152,7 +152,7 @@ function composition_string(mix)
     #     s *= @sprintf("%s: %0.3g, ", species, χ)
     # end
     # s[1:end-2] * "}"
-    join([@sprintf("%0.3g%s %s", 100χ, '%', species) for (species, χ) in zip(species_str, mix.zs)], ", ")
+    join([@sprintf("%0.3g%s %s", 100*pyconvert(Float64, χ), '%', species) for (species, χ) in zip(species_str, mix.zs)], ", ")
 end
 composition_string(s::Species) = s.name
 
