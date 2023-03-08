@@ -96,7 +96,6 @@ Species(chemname::String; kwargs...) = Species(PY_CHEM.Chemical(chemname; _SI_TP
 
 Base.show(io::IO, species::Species) = @printf(io, "Species(%s, %0.1f K, %0.3e Pa)", species.ID, species.T, species.P)
 
-
 """
     Mixture(chemnames::Vector{String}; kwargs...)
     Mixture(chemnames::Vector{Pair{String, Float64}}, kwargs...)
@@ -160,23 +159,34 @@ Base.show(io::IO, mix::Mixture) = @printf(io, "Mixture(%s, %0.1f K, %0.3e Pa)", 
 
 Py(c::Chemical) = getfield(c, :o)
 convert(::Type{T}, o::PythonCall.Py) where {T <: Chemical} = T(o)
-==(c1::Chemical, c2::Chemical) = Py(c1) == Py(c2)
-hash(c::Chemical) = hash(Py(c))
+==(c1::Chemical, c2::Chemical) = pyconvert(Bool, Py(c1) == Py(c2))
+Base.isequal(c1::Chemical, c2::Chemical) = isequal(Py(c1), Py(c2))
+Base.hash(c::Chemical, h::UInt) = hash(Py(c), h)
 Base.copy(c::T) where {T <: Chemical} = T(PY_COPY.copy(Py(c)))
 
-Base.Docs.doc(c::Chemical) = Base.Docs.doc(Py(c))
-Base.Docs.Binding(c::Chemical, s::Symbol) = Base.Docs.Binding(Py(c), s)
+Base.Docs.getdoc(c::Chemical, sig) = Base.Docs.getdoc(Py(c), sig)
+Base.Docs.doc(c::Chemical, sig::Type=Union{}) = Base.Docs.getdoc(c, sig)
+Base.Docs.Binding(c::Chemical, s::Symbol) = pygetattr(Py(c), String(s))
 
-Base.getproperty(c::Chemical, s::Symbol) = pyconvert(Any, getproperty(Py(c), s))
+function Base.getproperty(c::Chemical, s::Symbol)
+    if (s === :T) || (s === :P)
+        pyconvert(Float64, getproperty(Py(c), s))::Float64
+    elseif s === :ID
+        pyconvert(String, getproperty(Py(c), s))::String
+    elseif s === :IDs
+        pyconvert(Vector{String}, getproperty(Py(c), s))::Vector{String}
+    else
+        pyconvert(Any, getproperty(Py(c), s))
+    end
+end
 Base.setproperty!(c::Chemical, s::Symbol, x) = setproperty!(Py(c), s, x)
-Base.hasproperty(c::Chemical, s::Symbol) = hasproperty(Py(c), s)
+Base.hasproperty(c::Chemical, s::Symbol) = pyhasattr(Py(c), s)
 Base.propertynames(c::Chemical) = propertynames(Py(c))
 haskey(c::Chemical, x) = haskey(Py(c), x)
 
 # Strip units for unitful `setproperty`
 Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Temperature) = setproperty!(Py(c), s, _unit(T, u"K"))
 Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Pressure) = setproperty!(Py(c), s, _unit(T, u"Pa"))
-
 
 # Thermodynamic property accessors
 temperature(c::Chemical)  = c.T * u"K"
@@ -189,9 +199,9 @@ soundspeed(c::Chemical) = sqrt(isentropic_exponent(c) * R_specific(c) * temperat
 
 include("ShockTube.jl")
 
-if ccall(:jl_generating_output, Cint, ()) == 1
-    __init__()
+# if ccall(:jl_generating_output, Cint, ()) == 1
+    # __init__()
     # ShockTube.shockcalc(Species("N2"), Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01]), 1.8)
-end
-
+    # precompile(display, (mime"
+# end
 end # module

@@ -4,3 +4,4 @@
 /deps/build.log
 .CondaPkg/
 test/Manifest.toml
+snoop/*
