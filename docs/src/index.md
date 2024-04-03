@@ -17,7 +17,8 @@ Mixture
 ## Interaction with Conda
 PyThermo's Python dependencies are managed by CondaPkg.jl, which registers
 a project's dependencies in CondaPkg.toml (similar to Julia's Project.toml).
-These dependencies are installed automatically when PyThermo is first loaded.
-To avoid Conda management overhead during subsequent initialization of PyThermo,
-the `JULIA_CONDAPKG_OFFLINE` environment is set to `"true"` by default. This can
-be overriden by setting `JULIA_CONDAPKG_OFFLINE` to `"false"` before loading PyThermo.
+These dependencies are installed automatically in a shared Conda environment
+located at ~/.julia/conda_environments/Thermo when PyThermo is first loaded.
+If you'd like to use a different Conda environment, you can set the corresponding preference
+as described in the [CondaPkg.jl documentation](https://github.com/JuliaPy/CondaPkg.jl?tab=readme-ov-file#preferences).
+

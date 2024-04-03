@@ -1,15 +1,7 @@
+authors = ["Alex Ames <alexander.m.ames@gmail.com> and contributors"]
 name = "PyThermo"
 uuid = "6fae04a5-42e9-4d0c-90a8-26d1a9434b6b"
-authors = ["Alex Ames <alexander.m.ames@gmail.com> and contributors"]
-version = "0.2.4"
-
-[deps]
-CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
-Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
-Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+version = "0.2.5"
 
 [compat]
 CondaPkg = "0.2"
@@ -17,10 +9,22 @@ PythonCall = "0.9"
 Unitful = "1.6"
 julia = "1.6"
 
+[deps]
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Preferences = "21216c6a-2e73-6563-6e65-726566657250"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+
+[preferences.CondaPkg]
+env = "@Thermo"
 
 [targets]
 test = ["Aqua", "Test", "Unitful"]

@@ -4,15 +4,16 @@ module PyThermo
 # if .CondaPkg exists in the current environment, use "true" to skip
 # Conda pkg resolution.  Otherwise, use "false" to allow Conda to
 # resolve the pkg environment.
-using Pkg
-get!(ENV, "JULIA_CONDAPKG_OFFLINE") do
-    if ispath(joinpath(dirname(Pkg.project().path), ".CondaPkg"))
-        "yes"
-    else
-        "no"
-    end
-end
+# using Pkg
+# get!(ENV, "JULIA_CONDAPKG_OFFLINE") do
+#     if ispath(joinpath(dirname(Pkg.project().path), ".CondaPkg"))
+#         "yes"
+#     else
+#         "no"
+#     end
+# end
 
+using CondaPkg
 using PythonCall
 using Printf
 using Unitful
