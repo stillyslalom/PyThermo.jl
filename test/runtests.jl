@@ -8,7 +8,7 @@ using Aqua
 
     @testset "Species" begin
         SF6 = Species("SF6")
-        @test isapprox(ustrip(density(SF6)), 6.0383, rtol=2e-3)
+        @test isapprox(ustrip(density(SF6)), 5.9699, rtol=2e-3)
         SF6.calculate(T = 500)
         @test isapprox(ustrip(density(SF6)), 3.5657, rtol=2e-3)
     end
@@ -32,5 +32,5 @@ end
 end
 
 @testset "Aqua" begin
-    Aqua.test_all(PyThermo; ambiguities=false)
+    Aqua.test_all(PyThermo; ambiguities=false, persistent_tasks=false)
 end

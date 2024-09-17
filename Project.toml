@@ -1,7 +1,7 @@
 authors = ["Alex Ames <alexander.m.ames@gmail.com> and contributors"]
 name = "PyThermo"
 uuid = "6fae04a5-42e9-4d0c-90a8-26d1a9434b6b"
-version = "0.2.5"
+version = "0.3.0"
 
 [compat]
 CondaPkg = "0.2"
