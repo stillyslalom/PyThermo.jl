@@ -40,7 +40,7 @@ end
 
 abstract type Chemical end
 
-const _DOC_PRECISION_FIX = r"(\d\.\d\d)\d*" => s"\1"
+const _DOCTEST = """jldoctest pythermo; setup = :(using PyThermo), filter = r"(\\d\\.\\d\\d)\\d*" => s"\\1" """
 
 """
     Species(ID::String; T=298.15, P=101325)
@@ -66,7 +66,7 @@ P : pressure of the chemical (default 101325 Pa)
 
 Examples
 --------
-```jldoctest pythermo; setup = :(using PyThermo), filter = $_DOC_PRECISION_FIX
+```$_DOCTEST
 julia> He = Species("He")
 Species(He, 298.1 K, 1.013e+05 Pa)
 
@@ -132,7 +132,7 @@ The composition can also be specified by providing a vector of `"ID" => molefrac
 
 Examples
 --------
-```jldoctest; setup = :(using PyThermo), filter = $_DOC_PRECISION_FIX;
+```$_DOCTEST
 julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
 Mixture(78% N2, 21% O2, 1% Ar, 298.1 K, 1.013e+05 Pa)
 
