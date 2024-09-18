@@ -66,7 +66,7 @@ P : pressure of the chemical (default 101325 Pa)
 
 Examples
 --------
-```jldoctest pythermo; setup = :(using PyThermo); filter = $_DOC_PRECISION_FIX;
+```jldoctest pythermo; setup = :(using PyThermo), filter = $_DOC_PRECISION_FIX
 julia> He = Species("He")
 Species(He, 298.1 K, 1.013e+05 Pa)
 
@@ -132,7 +132,7 @@ The composition can also be specified by providing a vector of `"ID" => molefrac
 
 Examples
 --------
-```jldoctest; setup = :(using PyThermo);  filter = $_DOC_PRECISION_FIX;
+```jldoctest; setup = :(using PyThermo), filter = $_DOC_PRECISION_FIX;
 julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
 Mixture(78% N2, 21% O2, 1% Ar, 298.1 K, 1.013e+05 Pa)
 
