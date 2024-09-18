@@ -40,6 +40,8 @@ end
 
 abstract type Chemical end
 
+const _DOC_PRECISION_FIX = r"(\d\.\d\d)\d*" => s"\1"
+
 """
     Species(ID::String; T=298.15, P=101325)
 
@@ -64,12 +66,12 @@ P : pressure of the chemical (default 101325 Pa)
 
 Examples
 --------
-```jldoctest pythermo; setup = :(using PyThermo)
+```jldoctest pythermo; setup = :(using PyThermo); filter = $_DOC_PRECISION_FIX;
 julia> He = Species("He")
 Species(He, 298.1 K, 1.013e+05 Pa)
 
 julia> density(He)
-0.16352343013746262 kg m^-3
+0.16360253235815483 kg m^-3
 
 julia> using Unitful
 
@@ -130,12 +132,12 @@ The composition can also be specified by providing a vector of `"ID" => molefrac
 
 Examples
 --------
-```jldoctest; setup = :(using PyThermo)
+```jldoctest; setup = :(using PyThermo);  filter = $_DOC_PRECISION_FIX;
 julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
-Mixture(78% nitrogen, 21% oxygen, 1% argon, 298.1 K, 1.013e+05 Pa)
+Mixture(78% N2, 21% O2, 1% Ar, 298.1 K, 1.013e+05 Pa)
 
 julia> soundspeed(air)
-346.14659461295173 m s^-1
+346.1345044609487 m s^-1
 ```
 """
 struct Mixture <: Chemical
