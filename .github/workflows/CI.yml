@@ -13,10 +13,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version:
+        version: # valid versions: https://github.com/julia-actions/setup-julia?tab=readme-ov-file#examples
           - 'lts'
-          - 'release'
-          - 'beta'
+          - '1'
+          - 'pre'
         os:
           - ubuntu-latest
           - windows-latest
