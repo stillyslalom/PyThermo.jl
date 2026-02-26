@@ -6,6 +6,10 @@ CurrentModule = PyThermo
 
 Documentation for [PyThermo](https://github.com/stillyslalom/PyThermo.jl).
 
+## Modules
+
+- **[ShockTube](@ref)** - Shock tube analysis and gas dynamics calculations
+
 ```@index
 ```
 
