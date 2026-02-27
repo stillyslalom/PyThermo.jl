@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>ShockTube · PyThermo.jl</title><meta name="title" content="ShockTube · PyThermo.jl"/><meta property="og:title" content="ShockTube · PyThermo.jl"/><meta property="twitter:title" content="ShockTube · PyThermo.jl"/><meta name="description" content="Documentation for PyThermo.jl."/><meta property="og:description" content="Documentation for PyThermo.jl."/><meta property="twitter:description" content="Documentation for PyThermo.jl."/><meta property="og:url" content="https://stillyslalom.github.io/PyThermo.jl/shocktube/"/><meta property="twitter:url" content="https://stillyslalom.github.io/PyThermo.jl/shocktube/"/><link rel="canonical" href="https://stillyslalom.github.io/PyThermo.jl/shocktube/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">PyThermo.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>ShockTube</a><ul class="internal"><li><a class="tocitem" href="#Overview"><span>Overview</span></a></li><li><a class="tocitem" href="#Basic-shock-tube-functions"><span>Basic shock tube functions</span></a></li><li><a class="tocitem" href="#Riemann-interface-solver"><span>Riemann interface solver</span></a></li><li><a class="tocitem" href="#Understanding-the-results"><span>Understanding the results</span></a></li><li><a class="tocitem" href="#Display-and-printing"><span>Display and printing</span></a></li><li><a class="tocitem" href="#Examples"><span>Examples</span></a></li><li><a class="tocitem" href="#API-reference"><span>API reference</span></a></li><li><a class="tocitem" href="#Theory-background"><span>Theory background</span></a></li><li><a class="tocitem" href="#See-also"><span>See also</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>ShockTube</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>ShockTube</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/stillyslalom/PyThermo.jl/blob/main/docs/src/shocktube.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="ShockTube-module"><a class="docs-heading-anchor" href="#ShockTube-module">ShockTube module</a><a id="ShockTube-module-1"></a><a class="docs-heading-anchor-permalink" href="#ShockTube-module" title="Permalink"></a></h1><p>The <code>ShockTube</code> module provides functions for analyzing shock tube flows and gas-gas interfaces using the Rankine-Hugoniot relations and exact Riemann solvers.</p><h2 id="Overview"><a class="docs-heading-anchor" href="#Overview">Overview</a><a id="Overview-1"></a><a class="docs-heading-anchor-permalink" href="#Overview" title="Permalink"></a></h2><p>Shock tubes are fundamental devices in experimental fluid dynamics, used to generate controlled shock waves and study high-speed gas dynamics. This module provides tools to:</p><ol><li>Calculate shock jump conditions across moving shock waves</li><li>Determine required driver section pressures for desired shock strengths</li><li>Solve complete shock tube problems including reflected shocks</li><li>Analyze gas-gas interface dynamics using exact Riemann solvers</li></ol><h2 id="Basic-shock-tube-functions"><a class="docs-heading-anchor" href="#Basic-shock-tube-functions">Basic shock tube functions</a><a id="Basic-shock-tube-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-shock-tube-functions" title="Permalink"></a></h2><h3 id="Shock-jump-conditions"><a class="docs-heading-anchor" href="#Shock-jump-conditions">Shock jump conditions</a><a id="Shock-jump-conditions-1"></a><a class="docs-heading-anchor-permalink" href="#Shock-jump-conditions" title="Permalink"></a></h3><p>Calculate the post-shock state for a gas traversed by a shock wave:</p><pre><code class="language-julia hljs">using PyThermo
+using PyThermo.ShockTube
+
+# Define the initial state
+driven = Species(&quot;N2&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+
+# Calculate shock jump for Mach 2.0 shock
+shocked, velocity = shockjump!(driven, 2.0)
+
+pressure(shocked)    # post-shock pressure
+temperature(shocked) # post-shock temperature
+velocity             # flow velocity</code></pre><p>The <code>shockjump!</code> variant modifies the input state in-place:</p><pre><code class="language-julia hljs">driven = Species(&quot;N2&quot;)
+shocked, velocity = shockjump!(driven, 2.0)
+# driven is now modified to the shocked state
+@assert shocked === driven</code></pre><h3 id="Driver-pressure-calculation"><a class="docs-heading-anchor" href="#Driver-pressure-calculation">Driver pressure calculation</a><a id="Driver-pressure-calculation-1"></a><a class="docs-heading-anchor-permalink" href="#Driver-pressure-calculation" title="Permalink"></a></h3><p>Calculate the required driver section pressure to achieve a desired shock strength:</p><pre><code class="language-julia hljs">driver = Species(&quot;He&quot;)
+driven = Mixture([&quot;He&quot; =&gt; 0.95, &quot;acetone&quot; =&gt; 0.05], T=18u&quot;°C&quot;, P=85u&quot;kPa&quot;)
+Ms = 2.2
+
+# Calculate required driver pressure
+driver_calc = driverpressure!(driver, driven, Ms)
+pressure(driver_calc) # required driver pressure (~3.73 MPa)</code></pre><p>The <code>driverpressure!</code> variant modifies the driver state in-place:</p><pre><code class="language-julia hljs">driver = Species(&quot;He&quot;)
+driver_calc = driverpressure!(driver, driven, Ms)
+@assert driver_calc === driver</code></pre><h3 id="Complete-shock-tube-calculation"><a class="docs-heading-anchor" href="#Complete-shock-tube-calculation">Complete shock tube calculation</a><a id="Complete-shock-tube-calculation-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-shock-tube-calculation" title="Permalink"></a></h3><p>Perform a complete shock tube analysis including reflected shock:</p><pre><code class="language-julia hljs">driver = Species(&quot;He&quot;)
+driven = Mixture([&quot;He&quot; =&gt; 0.95, &quot;acetone&quot; =&gt; 0.05], T=18u&quot;°C&quot;, P=85u&quot;kPa&quot;)
+Ms = 2.2
+
+result = shockcalc!(driver, driven, Ms)
+
+# Access all states
+result.driven    # initial driven state
+result.shocked   # shocked state
+result.reflected # reflected shock state
+result.driver    # driver state
+
+# Access flow properties
+result.Ms # incident shock Mach
+result.Mr # reflected shock Mach
+result.u2 # post-shock velocity
+
+# Density ratio (useful for test time estimation)
+density(result.shocked) / density(result.driven) # ~2.64</code></pre><h2 id="Riemann-interface-solver"><a class="docs-heading-anchor" href="#Riemann-interface-solver">Riemann interface solver</a><a id="Riemann-interface-solver-1"></a><a class="docs-heading-anchor-permalink" href="#Riemann-interface-solver" title="Permalink"></a></h2><p>The exact Riemann solver analyzes the interaction between two adjacent gases with differing properties.</p><h3 id="Basic-usage:-Direct-specification"><a class="docs-heading-anchor" href="#Basic-usage:-Direct-specification">Basic usage: Direct specification</a><a id="Basic-usage:-Direct-specification-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-usage:-Direct-specification" title="Permalink"></a></h3><p>Solve for the interface state between two gases at rest:</p><pre><code class="language-julia hljs">using PyThermo.ShockTube: riemann_interface
+
+# Define left and right states
+left = Species(&quot;N2&quot;, P=500u&quot;kPa&quot;, T=600u&quot;K&quot;)
+right = Species(&quot;SF6&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+
+# Solve the Riemann problem
+sol = riemann_interface(left, right)
+
+# Interface properties
+sol.p_star    # interface pressure
+sol.u_star    # interface velocity
+sol.S_contact # contact discontinuity speed
+
+# Post-wave states
+sol.rho_star_L # left star density
+sol.rho_star_R # right star density
+sol.T_star_L   # left star temperature
+sol.T_star_R   # right star temperature
+
+# Wave speeds
+sol.S_L # left wave speed
+sol.S_R # right wave speed
+
+# Gamma values
+sol.gamma_L # left gas isentropic exponent
+sol.gamma_R # right gas isentropic exponent</code></pre><h3 id="With-initial-velocities"><a class="docs-heading-anchor" href="#With-initial-velocities">With initial velocities</a><a id="With-initial-velocities-1"></a><a class="docs-heading-anchor-permalink" href="#With-initial-velocities" title="Permalink"></a></h3><p>Specify non-zero initial velocities for each gas:</p><pre><code class="language-julia hljs">left = Species(&quot;N2&quot;, P=200u&quot;kPa&quot;, T=400u&quot;K&quot;)
+right = Species(&quot;Ar&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+
+# Left gas moving right at 100 m/s, right gas moving left at 50 m/s
+sol = riemann_interface(left, right, 100.0u&quot;m/s&quot;, -50.0u&quot;m/s&quot;)</code></pre><h3 id="Shock-tube-convenience-method"><a class="docs-heading-anchor" href="#Shock-tube-convenience-method">Shock tube convenience method</a><a id="Shock-tube-convenience-method-1"></a><a class="docs-heading-anchor-permalink" href="#Shock-tube-convenience-method" title="Permalink"></a></h3><p>Automatically apply shock jump and solve interface problem:</p><pre><code class="language-julia hljs"># Define initial states
+driven = Species(&quot;N2&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+test_gas = Species(&quot;SF6&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+
+# Shock Mach number
+Ms = 2.0
+
+# Automatically calculates shock jump in driven gas,
+# then solves interface with test gas
+sol = riemann_interface(driven, test_gas, Ms)
+
+sol.p_star # interface pressure
+sol.u_star # interface velocity</code></pre><p>This is equivalent to:</p><pre><code class="language-julia hljs"># Manual approach
+shocked, u_shocked = shockjump!(driven, Ms)
+sol = riemann_interface(shocked, test_gas, u_shocked, 0.0)</code></pre><h2 id="Understanding-the-results"><a class="docs-heading-anchor" href="#Understanding-the-results">Understanding the results</a><a id="Understanding-the-results-1"></a><a class="docs-heading-anchor-permalink" href="#Understanding-the-results" title="Permalink"></a></h2><h3 id="RiemannSolution-structure"><a class="docs-heading-anchor" href="#RiemannSolution-structure">RiemannSolution structure</a><a id="RiemannSolution-structure-1"></a><a class="docs-heading-anchor-permalink" href="#RiemannSolution-structure" title="Permalink"></a></h3><p>The <code>RiemannSolution</code> struct contains all information about the solved interface:</p><p><strong>Interface Properties</strong> (same on both sides):</p><ul><li><code>p_star</code>: Interface pressure</li><li><code>u_star</code>: Interface velocity</li><li><code>S_contact</code>: Contact discontinuity speed (equals <code>u_star</code>)</li></ul><p><strong>Left Star Region</strong> (between left wave and contact):</p><ul><li><code>rho_star_L</code>: Density</li><li><code>T_star_L</code>: Temperature</li><li><code>S_L</code>: Left wave speed (shock or rarefaction tail)</li></ul><p><strong>Right Star Region</strong> (between contact and right wave):</p><ul><li><code>rho_star_R</code>: Density</li><li><code>T_star_R</code>: Temperature</li><li><code>S_R</code>: Right wave speed (shock or rarefaction tail)</li></ul><p><strong>Original State Information</strong>:</p><ul><li><code>gamma_L</code>: Specific heat ratio of left gas</li><li><code>gamma_R</code>: Specific heat ratio of right gas</li></ul><h3 id="Wave-structure"><a class="docs-heading-anchor" href="#Wave-structure">Wave structure</a><a id="Wave-structure-1"></a><a class="docs-heading-anchor-permalink" href="#Wave-structure" title="Permalink"></a></h3><p>The Riemann solution consists of three waves:</p><ol><li><p><strong>Left Wave</strong> (speed <code>S_L</code>): Propagates into left gas</p><ul><li>If <code>p_star &gt; p_left</code>: Shock wave (compression)</li><li>If <code>p_star &lt; p_left</code>: Rarefaction wave (expansion)</li></ul></li><li><p><strong>Contact Discontinuity</strong> (speed <code>S_contact = u_star</code>): Material interface</p><ul><li>Pressure and velocity continuous across contact</li><li>Density and temperature discontinuous (different gases)</li></ul></li><li><p><strong>Right Wave</strong> (speed <code>S_R</code>): Propagates into right gas</p><ul><li>If <code>p_star &gt; p_right</code>: Shock wave (compression)</li><li>If <code>p_star &lt; p_right</code>: Rarefaction wave (expansion)</li></ul></li></ol><h3 id="Physical-interpretation"><a class="docs-heading-anchor" href="#Physical-interpretation">Physical interpretation</a><a id="Physical-interpretation-1"></a><a class="docs-heading-anchor-permalink" href="#Physical-interpretation" title="Permalink"></a></h3><pre><code class="language-julia hljs">left = Species(&quot;N2&quot;, P=400u&quot;kPa&quot;, T=500u&quot;K&quot;)
+right = Species(&quot;Ar&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+
+sol = riemann_interface(left, right)
+
+# High pressure on left causes expansion wave into left gas
+# and compression (shock) into right gas
+sol.p_star &lt; pressure(left)  # left wave is rarefaction
+sol.p_star &gt; pressure(right) # right wave is shock
+
+# Interface moves toward lower pressure region
+sol.u_star &gt; 0.0u&quot;m/s&quot; # interface moving right if true, left if false
+
+# Wave speeds bracket the contact
+@assert sol.S_L &lt; sol.S_contact &lt; sol.S_R</code></pre><h2 id="Display-and-printing"><a class="docs-heading-anchor" href="#Display-and-printing">Display and printing</a><a id="Display-and-printing-1"></a><a class="docs-heading-anchor-permalink" href="#Display-and-printing" title="Permalink"></a></h2><p>The <code>RiemannSolution</code> struct has a custom display format:</p><pre><code class="language-julia hljs">sol = riemann_interface(left, right)
+println(sol)</code></pre><p>Output:</p><pre><code class="nohighlight hljs">RiemannSolution:
+  Interface: p* = 229 kPa, u* = 175 m/s
+  Left  state: ρ = 1.81 kg/m³, T = 427 K, S_L = -454 m/s
+  Right state: ρ = 2.59 kg/m³, T = 425 K, S_R = 460 m/s</code></pre><h2 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h2><h3 id="Example-1:-Helium-driven-shock-tube"><a class="docs-heading-anchor" href="#Example-1:-Helium-driven-shock-tube">Example 1: Helium-driven shock tube</a><a id="Example-1:-Helium-driven-shock-tube-1"></a><a class="docs-heading-anchor-permalink" href="#Example-1:-Helium-driven-shock-tube" title="Permalink"></a></h3><p>Complete analysis of a helium-driven shock tube with acetone seeding:</p><pre><code class="language-julia hljs">using PyThermo
+using PyThermo.ShockTube
+
+# Define gases
+driver = Species(&quot;He&quot;)
+driven = Mixture([&quot;He&quot; =&gt; 0.95, &quot;acetone&quot; =&gt; 0.05], T=18u&quot;°C&quot;, P=85u&quot;kPa&quot;)
+
+# Target shock Mach number
+Ms = 2.2
+
+# Complete calculation
+result = shockcalc!(driver, driven, Ms)
+
+# Shock tube results
+result.Ms                                        # incident shock Mach
+result.u2                                        # post-shock velocity
+pressure(result.shocked)                         # post-shock pressure
+temperature(result.shocked)                      # post-shock temperature
+density(result.shocked) / density(result.driven) # density ratio
+
+# Reflected shock
+result.Mr                     # reflected shock Mach number
+pressure(result.reflected)    # reflected shock pressure
+temperature(result.reflected) # reflected shock temperature
+
+# Driver requirements
+pressure(result.driver) # required driver pressure</code></pre><h3 id="Example-2:-Gas-gas-interface-analysis"><a class="docs-heading-anchor" href="#Example-2:-Gas-gas-interface-analysis">Example 2: Gas-gas interface analysis</a><a id="Example-2:-Gas-gas-interface-analysis-1"></a><a class="docs-heading-anchor-permalink" href="#Example-2:-Gas-gas-interface-analysis" title="Permalink"></a></h3><p>Analyze the interface between shocked nitrogen and sulfur hexafluoride:</p><pre><code class="language-julia hljs">using PyThermo
+using PyThermo.ShockTube: riemann_interface
+
+# Initial states
+driven = Species(&quot;N2&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+test_gas = Species(&quot;SF6&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+
+# Shock strength
+Ms = 1.8
+
+# Solve interface problem
+sol = riemann_interface(driven, test_gas, Ms)
+
+# Interface analysis
+sol.p_star # interface pressure
+sol.u_star # interface velocity
+
+# Left (shocked N2) properties
+sol.rho_star_L # density
+sol.T_star_L   # temperature
+sol.S_L        # wave speed
+
+# Right (SF6) properties
+sol.rho_star_R # density
+sol.T_star_R   # temperature
+sol.S_R        # wave speed
+
+sol.S_contact # contact discontinuity speed</code></pre><h3 id="Example-3:-Different-gas-combinations"><a class="docs-heading-anchor" href="#Example-3:-Different-gas-combinations">Example 3: Different gas combinations</a><a id="Example-3:-Different-gas-combinations-1"></a><a class="docs-heading-anchor-permalink" href="#Example-3:-Different-gas-combinations" title="Permalink"></a></h3><p>Compare interface behavior for different gas pairs:</p><pre><code class="language-julia hljs">using PyThermo.ShockTube: riemann_interface
+
+# Common left state
+left = Species(&quot;He&quot;, P=300u&quot;kPa&quot;, T=500u&quot;K&quot;)
+
+# Different right gases
+gases = [&quot;Ar&quot;, &quot;N2&quot;, &quot;SF6&quot;, &quot;CO2&quot;]
+
+# Gas pair comparisons (left = He at 300 kPa, 500 K)
+for gas in gases
+    right = Species(gas, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;)
+    sol = riemann_interface(left, right)
+    
+    # He / gas results:
+    sol.p_star                      # interface pressure
+    sol.u_star                      # interface velocity
+    sol.rho_star_L                  # left star density
+    sol.rho_star_R                  # right star density
+    sol.rho_star_L / sol.rho_star_R # density jump
+end</code></pre><h2 id="API-reference"><a class="docs-heading-anchor" href="#API-reference">API reference</a><a id="API-reference-1"></a><a class="docs-heading-anchor-permalink" href="#API-reference" title="Permalink"></a></h2><article><details class="docstring" open="true"><summary id="PyThermo.ShockTube.shockjump!"><a class="docstring-binding" href="#PyThermo.ShockTube.shockjump!"><code>PyThermo.ShockTube.shockjump!</code></a> — <span class="docstring-category">Function</span></summary><section><div><pre><code class="language-julia hljs">shockjump!(gas::Chemical, Mach::Real) -&gt; (Chemical, Unitful.Velocity)
+shockjump(gas::Chemical, Mach::Real) -&gt; (Chemical, Unitful.Velocity)</code></pre><p>Calculate shock jump conditions across a normal shock wave using the Rankine-Hugoniot relations.</p><p>The mutating version <code>shockjump!</code> modifies the input <code>gas</code> object in place, while <code>shockjump</code>  creates a copy and leaves the original unchanged.</p><p><strong>Parameters</strong></p><ul><li><code>gas</code>: A <code>Species</code> or <code>Mixture</code> object representing the pre-shock gas state</li><li><code>Mach</code>: Shock Mach number (ratio of shock velocity to sound speed in pre-shock gas)</li></ul><p><strong>Returns</strong></p><p>A tuple containing:</p><ul><li>Modified <code>gas</code> object with post-shock temperature and pressure</li><li>Post-shock gas velocity relative to the laboratory frame (with units <code>m/s</code>)</li></ul><p><strong>Physics</strong></p><p>The function calculates:</p><ul><li>Pressure ratio (PR) across the shock</li><li>Temperature ratio (TR) across the shock  </li><li>Post-shock gas velocity using the Rankine-Hugoniot jump conditions</li></ul><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; driven = Mixture([&quot;He&quot; =&gt; 0.95, &quot;acetone&quot; =&gt; 0.05], T = 18u&quot;°C&quot;, P = 85u&quot;kPa&quot;)
+Mixture(95% He, 5% acetone, 291.1 K, 8.500e+04 Pa)
+
+julia&gt; shocked, velocity = shockjump(driven, 2.2);
+
+julia&gt; round(Int, ustrip(u&quot;K&quot;, temperature(shocked)))
+624
+
+julia&gt; round(Int, ustrip(u&quot;m/s&quot;, velocity))
+1024</code></pre><p><strong>See Also</strong></p><ul><li><a href="#PyThermo.ShockTube.shockcalc!"><code>shockcalc!</code></a>: Comprehensive shock tube calculation</li><li><a href="#PyThermo.ShockTube.driverpressure!"><code>driverpressure!</code></a>: Calculate required driver pressure</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/stillyslalom/PyThermo.jl/blob/f8b9f9a0960d490eab459154520516cde6fe6af0/src/ShockTube.jl#L17-L58">source</a></section></details></article><article><details class="docstring" open="true"><summary id="PyThermo.ShockTube.driverpressure!"><a class="docstring-binding" href="#PyThermo.ShockTube.driverpressure!"><code>PyThermo.ShockTube.driverpressure!</code></a> — <span class="docstring-category">Function</span></summary><section><div><pre><code class="language-julia hljs">driverpressure!(driver::Chemical, driven::Chemical, Ms::Real) -&gt; Chemical
+driverpressure(driver::Chemical, driven::Chemical, Ms::Real) -&gt; Chemical</code></pre><p>Calculate the required driver gas pressure to achieve a specified shock Mach number in a shock tube.</p><p>The mutating version <code>driverpressure!</code> modifies the input <code>driver</code> object in place, while  <code>driverpressure</code> creates a copy and leaves the original unchanged.</p><p><strong>Parameters</strong></p><ul><li><code>driver</code>: A <code>Species</code> or <code>Mixture</code> object representing the driver gas (high-pressure section)</li><li><code>driven</code>: A <code>Species</code> or <code>Mixture</code> object representing the driven gas (low-pressure test section)</li><li><code>Ms</code>: Desired shock Mach number in the driven section</li></ul><p><strong>Returns</strong></p><p>The modified <code>driver</code> object with updated pressure that will produce the specified shock Mach number.</p><p><strong>Physics</strong></p><p>Uses the shock tube theory relating driver and driven gas properties through the contact  surface and expansion wave. The calculation accounts for:</p><ul><li>Isentropic exponents (γ) of both gases</li><li>Sound speeds in both sections</li><li>The relationship between shock strength and pressure ratio across the contact surface</li></ul><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; driver = Species(&quot;He&quot;);
+
+julia&gt; driven = Mixture([&quot;He&quot; =&gt; 0.95, &quot;acetone&quot; =&gt; 0.05], T = 18u&quot;°C&quot;, P = 85u&quot;kPa&quot;);
+
+julia&gt; driver_calc = driverpressure(driver, driven, 2.2);
+
+julia&gt; round(typeof(1.0u&quot;MPa&quot;), pressure(driver_calc), digits=2)
+3.73 MPa</code></pre><p><strong>See Also</strong></p><ul><li><a href="#PyThermo.ShockTube.shockjump!"><code>shockjump!</code></a>: Calculate shock jump conditions</li><li><a href="#PyThermo.ShockTube.shockcalc!"><code>shockcalc!</code></a>: Comprehensive shock tube calculation</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/stillyslalom/PyThermo.jl/blob/f8b9f9a0960d490eab459154520516cde6fe6af0/src/ShockTube.jl#L73-L112">source</a></section></details></article><article><details class="docstring" open="true"><summary id="PyThermo.ShockTube.shockcalc!"><a class="docstring-binding" href="#PyThermo.ShockTube.shockcalc!"><code>PyThermo.ShockTube.shockcalc!</code></a> — <span class="docstring-category">Function</span></summary><section><div><pre><code class="language-julia hljs">shockcalc!(driver::Chemical, driven::Chemical, Ms::Real) -&gt; ShockCalc
+shockcalc(driver::Chemical, driven::Chemical, Ms::Real) -&gt; ShockCalc</code></pre><p>Perform a comprehensive shock tube calculation for a given shock Mach number.</p><p>This function calculates all relevant states in a shock tube experiment:</p><ul><li>Required driver pressure to achieve the specified Mach number</li><li>Post-shock conditions in the driven section (region 2)</li><li>Reflected shock conditions at the end wall (region 5)</li><li>Wave velocities and gas velocities</li></ul><p>The mutating version <code>shockcalc!</code> modifies the input <code>driver</code> object in place, while  <code>shockcalc</code> creates a copy and leaves the original unchanged.</p><p><strong>Parameters</strong></p><ul><li><code>driver</code>: A <code>Species</code> or <code>Mixture</code> object representing the driver gas (high-pressure section)</li><li><code>driven</code>: A <code>Species</code> or <code>Mixture</code> object representing the driven gas (low-pressure test section)</li><li><code>Ms</code>: Desired incident shock Mach number</li></ul><p><strong>Returns</strong></p><p>A <a href="#PyThermo.ShockTube.ShockCalc"><code>ShockCalc</code></a> struct containing:</p><ul><li>All four gas states (driver, driven, shocked, reflected)</li><li>Incident and reflected shock Mach numbers</li><li>Post-shock gas velocity</li></ul><p>The returned object displays as a formatted table with pressure, temperature, density, and sound speed for each region.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; driver = Species(&quot;He&quot;)
+Species(He, 298.1 K, 1.013e+05 Pa)
+
+julia&gt; driven = Mixture([&quot;He&quot; =&gt; 0.95, &quot;acetone&quot; =&gt; 0.05], T = 18u&quot;°C&quot;, P = 85u&quot;kPa&quot;)
+Mixture(95% He, 5% acetone, 291.1 K, 8.500e+04 Pa)
+
+julia&gt; result = shockcalc(driver, driven, 2.2);
+
+julia&gt; round(density(result.shocked) / density(result.driven), digits=2)
+2.65</code></pre><p><strong>Physics</strong></p><p>The calculation follows standard shock tube theory:</p><ol><li>Determines driver pressure needed for specified shock Mach number</li><li>Calculates incident shock jump conditions using Rankine-Hugoniot relations</li><li>Computes reflected shock conditions at the end wall</li><li>Returns complete state information for analysis</li></ol><p><strong>See Also</strong></p><ul><li><a href="#PyThermo.ShockTube.shockjump!"><code>shockjump!</code></a>: Calculate shock jump conditions only</li><li><a href="#PyThermo.ShockTube.driverpressure!"><code>driverpressure!</code></a>: Calculate required driver pressure only</li><li><a href="#PyThermo.ShockTube.ShockCalc"><code>ShockCalc</code></a>: Result container struct</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/stillyslalom/PyThermo.jl/blob/f8b9f9a0960d490eab459154520516cde6fe6af0/src/ShockTube.jl#L203-L257">source</a></section></details></article><article><details class="docstring" open="true"><summary id="PyThermo.ShockTube.ShockCalc"><a class="docstring-binding" href="#PyThermo.ShockTube.ShockCalc"><code>PyThermo.ShockTube.ShockCalc</code></a> — <span class="docstring-category">Type</span></summary><section><div><pre><code class="language-julia hljs">ShockCalc</code></pre><p>Container struct for comprehensive shock tube calculation results.</p><p>This struct stores the complete state information for all regions in a shock tube experiment, including the driver section, driven section, post-shock (region 2), and reflected shock regions.</p><p><strong>Fields</strong></p><ul><li><code>driver::Chemical</code>: Driver gas state (high-pressure section, region 4)</li><li><code>driven::Chemical</code>: Initial driven gas state (low-pressure test section, region 1)</li><li><code>shocked::Chemical</code>: Post-incident-shock gas state (region 2)</li><li><code>reflected::Chemical</code>: Post-reflected-shock gas state (region 5)</li><li><code>Ms::Float64</code>: Incident shock Mach number</li><li><code>Mr::Float64</code>: Reflected shock Mach number</li><li><code>u2::Unitful.Velocity</code>: Post-shock gas velocity (region 2)</li></ul><p><strong>Display</strong></p><p>When displayed, <code>ShockCalc</code> presents results in a formatted table showing pressure, temperature, density, and sound speed for each region, along with incident and reflected wave velocities.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; driver = Species(&quot;He&quot;);
+
+julia&gt; driven = Mixture([&quot;He&quot; =&gt; 0.95, &quot;acetone&quot; =&gt; 0.05], T = 18u&quot;°C&quot;, P = 85u&quot;kPa&quot;);
+
+julia&gt; result = shockcalc(driver, driven, 2.2);
+
+julia&gt; result.Ms
+2.2
+
+julia&gt; round(typeof(1.0u&quot;kPa&quot;), pressure(result.shocked), digits=1)
+481.8 kPa</code></pre><p><strong>See Also</strong></p><ul><li><a href="#PyThermo.ShockTube.shockcalc!"><code>shockcalc!</code></a>: Function that creates <code>ShockCalc</code> objects</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/stillyslalom/PyThermo.jl/blob/f8b9f9a0960d490eab459154520516cde6fe6af0/src/ShockTube.jl#L131-L169">source</a></section></details></article><article><details class="docstring" open="true"><summary id="PyThermo.ShockTube.riemann_interface"><a class="docstring-binding" href="#PyThermo.ShockTube.riemann_interface"><code>PyThermo.ShockTube.riemann_interface</code></a> — <span class="docstring-category">Function</span></summary><section><div><pre><code class="language-julia hljs">riemann_interface(left::Chemical, right::Chemical, u_left=0.0u&quot;m/s&quot;, u_right=0.0u&quot;m/s&quot;) -&gt; RiemannSolution
+riemann_interface(left::Chemical, right::Chemical, Ms::Real) -&gt; RiemannSolution</code></pre><p>Solve the exact Riemann problem for two gases in contact at an interface.</p><p>This function uses the exact Riemann solver to determine the post-shock state at a gas interface, including pressure, velocity, densities, temperatures, and wave speeds for both gases. The solution accounts for different isentropic exponents (γ) on each side of the interface.</p><p><strong>Parameters</strong></p><p><strong>Method 1: Direct specification of states and velocities</strong></p><ul><li><code>left::Chemical</code>: Left gas state (Species or Mixture)</li><li><code>right::Chemical</code>: Right gas state (Species or Mixture)</li><li><code>u_left::Unitful.Velocity</code>: Velocity of left gas (default 0.0u&quot;m/s&quot;)</li><li><code>u_right::Unitful.Velocity</code>: Velocity of right gas (default 0.0u&quot;m/s&quot;)</li></ul><p><strong>Method 2: Shock tube convenience method</strong></p><ul><li><code>left::Chemical</code>: Unshocked driven gas (will be passed through shock)</li><li><code>right::Chemical</code>: Right gas state (Species or Mixture, assumed at rest)</li><li><code>Ms::Real</code>: Incident shock Mach number</li></ul><p>When using Method 2, the function automatically:</p><ol><li>Applies shock jump conditions to the left gas at the given Mach number</li><li>Computes the post-shock velocity</li><li>Solves the Riemann problem with the shocked left state</li><li>Assumes right gas is at rest (u_right = 0)</li></ol><p><strong>Returns</strong></p><p>A <a href="#PyThermo.ShockTube.RiemannSolution"><code>RiemannSolution</code></a> struct containing:</p><ul><li>Interface pressure and velocity</li><li>Star region densities and temperatures for both gases</li><li>Wave speeds (left wave, right wave, contact discontinuity)</li><li>Isentropic exponents for reference</li></ul><p><strong>Physics</strong></p><p>The exact Riemann solver:</p><ol><li>Iteratively solves for the star region pressure using Newton-Raphson</li><li>Computes the star region velocity from momentum conservation</li><li>Calculates star region densities from Rankine-Hugoniot relations (shock) or isentropic relations (rarefaction)</li><li>Determines temperatures from the ideal gas law</li><li>Computes all wave speeds</li></ol><p><strong>Examples</strong></p><p>Direct specification of states:</p><pre><code class="language-julia-repl hljs">julia&gt; left = Species(&quot;N2&quot;, P=500u&quot;kPa&quot;, T=600u&quot;K&quot;);
+
+julia&gt; right = Species(&quot;SF6&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;);
+
+julia&gt; sol = riemann_interface(left, right);
+
+julia&gt; round(ustrip(u&quot;kPa&quot;, sol.p_star), digits=1)
+319.6
+
+julia&gt; round(ustrip(u&quot;m/s&quot;, sol.u_star), digits=1)
+155.8</code></pre><p>With velocities:</p><pre><code class="language-julia-repl hljs">julia&gt; left = Species(&quot;N2&quot;, P=200u&quot;kPa&quot;, T=400u&quot;K&quot;);
+
+julia&gt; right = Species(&quot;Ar&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;);
+
+julia&gt; sol = riemann_interface(left, right, 100.0u&quot;m/s&quot;, -50.0u&quot;m/s&quot;);
+
+julia&gt; sol.u_star &gt; 0.0u&quot;m/s&quot;
+true</code></pre><p>Shock tube convenience method:</p><pre><code class="language-julia-repl hljs">julia&gt; driven = Species(&quot;N2&quot;);
+
+julia&gt; test_gas = Species(&quot;SF6&quot;);
+
+julia&gt; sol = riemann_interface(driven, test_gas, 1.5);
+
+julia&gt; round(ustrip(u&quot;m/s&quot;, sol.S_contact), digits=1)
+159.2</code></pre><p><strong>See Also</strong></p><ul><li><a href="#PyThermo.ShockTube.RiemannSolution"><code>RiemannSolution</code></a>: Result container struct</li><li><a href="#PyThermo.ShockTube.shockjump!"><code>shockjump!</code></a>: Calculate shock jump conditions</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/stillyslalom/PyThermo.jl/blob/f8b9f9a0960d490eab459154520516cde6fe6af0/src/ShockTube.jl#L336-L425">source</a></section><section><div><pre><code class="language-julia hljs">riemann_interface(left::Chemical, right::Chemical, Ms::Real) -&gt; RiemannSolution</code></pre><p>Convenience method for shock tube problems: automatically applies shock jump conditions to the left gas and solves the Riemann problem.</p><p>This method assumes:</p><ul><li><code>left</code> is the unshocked driven gas</li><li><code>right</code> is at rest (u_right = 0)</li><li>A shock of Mach number <code>Ms</code> passes through the left gas</li></ul><p>The function computes the shocked state and velocity of the left gas, then solves the exact Riemann problem at the interface.</p><p><strong>Parameters</strong></p><ul><li><code>left::Chemical</code>: Unshocked driven gas (will be passed through shock at Ms)</li><li><code>right::Chemical</code>: Test gas at rest</li><li><code>Ms::Real</code>: Incident shock Mach number</li></ul><p><strong>Returns</strong></p><p>A <a href="#PyThermo.ShockTube.RiemannSolution"><code>RiemannSolution</code></a> with the interface solution</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; driven = Species(&quot;N2&quot;);
+
+julia&gt; test_gas = Species(&quot;SF6&quot;);
+
+julia&gt; sol = riemann_interface(driven, test_gas, 1.5);
+
+julia&gt; round(ustrip(u&quot;m/s&quot;, sol.S_contact), digits=1)
+159.2</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/stillyslalom/PyThermo.jl/blob/f8b9f9a0960d490eab459154520516cde6fe6af0/src/ShockTube.jl#L472-L505">source</a></section></details></article><article><details class="docstring" open="true"><summary id="PyThermo.ShockTube.RiemannSolution"><a class="docstring-binding" href="#PyThermo.ShockTube.RiemannSolution"><code>PyThermo.ShockTube.RiemannSolution</code></a> — <span class="docstring-category">Type</span></summary><section><div><pre><code class="language-julia hljs">RiemannSolution</code></pre><p>Container struct for exact Riemann solver results at a gas interface.</p><p>This struct stores the complete solution of the Riemann problem for two gases in contact, including the star region properties (interface conditions), star densities for both gases, and all relevant wave speeds. All properties can be accessed using dot notation.</p><p><strong>Fields</strong></p><ul><li><code>p_star::Unitful.Pressure</code>: Pressure at the interface (star region)</li><li><code>u_star::Unitful.Velocity</code>: Velocity at the interface (star region)</li><li><code>rho_star_L::Unitful.Density</code>: Density of left gas in star region</li><li><code>rho_star_R::Unitful.Density</code>: Density of right gas in star region</li><li><code>T_star_L::Unitful.Temperature</code>: Temperature of left gas in star region</li><li><code>T_star_R::Unitful.Temperature</code>: Temperature of right gas in star region</li><li><code>S_L::Unitful.Velocity</code>: Left wave speed (shock or rarefaction head)</li><li><code>S_R::Unitful.Velocity</code>: Right wave speed (shock or rarefaction head)</li><li><code>S_contact::Unitful.Velocity</code>: Contact discontinuity speed</li><li><code>gamma_L::Float64</code>: Isentropic exponent of left gas</li><li><code>gamma_R::Float64</code>: Isentropic exponent of right gas</li></ul><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; left = Species(&quot;N2&quot;, P=500u&quot;kPa&quot;, T=600u&quot;K&quot;);
+
+julia&gt; right = Species(&quot;SF6&quot;, P=100u&quot;kPa&quot;, T=300u&quot;K&quot;);
+
+julia&gt; sol = riemann_interface(left, right);
+
+julia&gt; round(u&quot;kPa&quot;, sol.p_star, digits=2)
+319.59 kPa
+
+julia&gt; round(u&quot;m/s&quot;, sol.u_star, digits=1)
+155.8 m s^-1</code></pre><p><strong>See Also</strong></p><ul><li><a href="#PyThermo.ShockTube.shockcalc!"><code>shockcalc!</code></a>: Function that creates <code>ShockCalc</code> objects</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/stillyslalom/PyThermo.jl/blob/f8b9f9a0960d490eab459154520516cde6fe6af0/src/ShockTube.jl#L267-L306">source</a></section></details></article><h2 id="Theory-background"><a class="docs-heading-anchor" href="#Theory-background">Theory background</a><a id="Theory-background-1"></a><a class="docs-heading-anchor-permalink" href="#Theory-background" title="Permalink"></a></h2><h3 id="Rankine-Hugoniot-relations"><a class="docs-heading-anchor" href="#Rankine-Hugoniot-relations">Rankine-Hugoniot relations</a><a id="Rankine-Hugoniot-relations-1"></a><a class="docs-heading-anchor-permalink" href="#Rankine-Hugoniot-relations" title="Permalink"></a></h3><p>The shock jump conditions relate pre-shock and post-shock states through conservation of mass, momentum, and energy:</p><ul><li><strong>Mass</strong>: ρ₁u₁ = ρ₂u₂</li><li><strong>Momentum</strong>: p₁ + ρ₁u₁² = p₂ + ρ₂u₂²</li><li><strong>Energy</strong>: h₁ + u₁²/2 = h₂ + u₂²/2</li></ul><p>Where subscript 1 denotes pre-shock and subscript 2 denotes post-shock states.</p><h3 id="Riemann-problem"><a class="docs-heading-anchor" href="#Riemann-problem">Riemann problem</a><a id="Riemann-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Riemann-problem" title="Permalink"></a></h3><p>The Riemann problem considers the evolution of two initially separated gas regions. The solution consists of three waves:</p><ol><li>A wave propagating into the left state</li><li>A contact discontinuity (material interface)</li><li>A wave propagating into the right state</li></ol><p>The interface pressure p* and velocity u* are found by solving:</p><p>f<em>L(p<em>, u</em>) = f</em>R(p<em>, u</em>)</p><p>where f represents the relations across the left and right waves. The solver iteratively finds p* and u* that satisfy continuity of pressure and velocity at the interface.</p><h2 id="See-also"><a class="docs-heading-anchor" href="#See-also">See also</a><a id="See-also-1"></a><a class="docs-heading-anchor-permalink" href="#See-also" title="Permalink"></a></h2><ul><li><a href="../">PyThermo main documentation</a></li><li>Gas properties: <code>Species</code>, <code>Mixture</code></li><li>Property accessors: <code>pressure</code>, <code>temperature</code>, <code>density</code>, <code>soundspeed</code></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 27 February 2026 23:27">Friday 27 February 2026</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
