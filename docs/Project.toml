@@ -1,4 +1,5 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+OpenSSL_jll = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
 PyThermo = "6fae04a5-42e9-4d0c-90a8-26d1a9434b6b"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"

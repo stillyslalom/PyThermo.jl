@@ -1,3 +1,6 @@
+using OpenSSL_jll
+ENV["LD_PRELOAD"] = OpenSSL_jll.libssl_path * ":" * OpenSSL_jll.libcrypto_path
+
 using PyThermo
 using Documenter
 

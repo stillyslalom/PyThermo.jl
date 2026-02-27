@@ -1,3 +1,6 @@
+```@meta
+CurrentModule = PyThermo.ShockTube
+```
 # ShockTube module
 
 The `ShockTube` module provides functions for analyzing shock tube flows and gas-gas interfaces using the Rankine-Hugoniot relations and exact Riemann solvers.
