@@ -8,7 +8,9 @@ using Printf
 
 export shockjump!, shockjump, driverpressure!, driverpressure, shockcalc!, shockcalc, ShockCalc
 export riemann_interface, RiemannSolution
-export interface_velocity, interface_pressure, left_wave_speed, right_wave_speed
+
+# Include the exact Riemann solver at module load time
+include("riemann_simple.jl")
 
 γ(f::PyThermo.Chemical)  = isentropic_exponent(f)
 
@@ -228,7 +230,7 @@ The returned object displays as a formatted table with pressure, temperature, de
 and sound speed for each region.
 
 # Examples
-```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful), filter = r"\\d\\.\\d{3,}\\d*" => s"\\d\\.\\d{2}"
+```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful)
 julia> driver = Species("He")
 Species(He, 298.1 K, 1.013e+05 Pa)
 
@@ -237,8 +239,8 @@ Mixture(95.0% helium, 5.00% acetone, 291.1 K, 8.500e+04 Pa)
 
 julia> result = shockcalc(driver, driven, 2.2);
 
-julia> density(result.shocked) / density(result.driven)
-2.6407573597520297
+julia> round(density(result.shocked) / density(result.driven), digits=2)
+2.65
 ```
 
 # Physics
@@ -262,353 +264,238 @@ function shockcalc!(driver, driven, Ms)
 end
 shockcalc(driver, driven, Ms) = shockcalc!(copy(driver), driven, Ms)
 
-# Helper functions for Riemann solver
-
 """
-    shock_pressure_velocity(gas::Chemical, p_star::Real) -> Float64
+    RiemannSolution
 
-Calculate velocity change across a shock wave for given pressure ratio.
-Returns velocity change magnitude in m/s (always positive).
-"""
-function shock_pressure_velocity(gas::Chemical, p_star::Real)
-    p0 = gas.P
-    γ = isentropic_exponent(gas)
-    a0 = ustrip(u"m/s", soundspeed(gas))
-    
-    # Pressure ratio
-    pr = p_star / p0
-    
-    # Velocity change across shock (Rankine-Hugoniot)
-    # Formula from Toro, "Riemann Solvers and Numerical Methods for Fluid Dynamics"
-    α = (γ + 1) / (2γ)
-    β = (γ - 1) / (2γ)
-    du = a0 * (pr - 1) * √(1 / (γ * (β + α * pr)))
-    
-    return abs(du)
-end
+Container struct for exact Riemann solver results at a gas interface.
 
-"""
-    expansion_pressure_velocity(gas::Chemical, p_star::Real) -> Float64
-
-Calculate velocity change across an isentropic expansion wave.
-Returns velocity change magnitude in m/s (always positive).
-"""
-function expansion_pressure_velocity(gas::Chemical, p_star::Real)
-    p0 = gas.P
-    γ = isentropic_exponent(gas)
-    a0 = ustrip(u"m/s", soundspeed(gas))
-    
-    # Pressure ratio
-    pr = p_star / p0
-    
-    # Velocity change across expansion (isentropic)
-    du = 2 * a0 / (γ - 1) * (1 - pr^((γ - 1) / (2γ)))
-    
-    return abs(du)
-end
-
-"""
-    wave_velocity(gas::Chemical, p_star::Real, wave_type::Symbol) -> Float64
-
-Calculate wave speed (shock or head of expansion fan) in m/s.
-"""
-function wave_velocity(gas::Chemical, p_star::Real, wave_type::Symbol)
-    p0 = gas.P
-    γ = isentropic_exponent(gas)
-    a0 = ustrip(u"m/s", soundspeed(gas))
-    
-    if wave_type == :shock
-        # Shock speed
-        pr = p_star / p0
-        α = (γ + 1) / (γ - 1)
-        return a0 * √(1 + α * (pr - 1))
-    else  # :expansion
-        # Head of expansion fan
-        pr = p_star / p0
-        return a0 * (1 + (γ - 1) / 2 * (1 - pr^((γ - 1) / (2γ))))
-    end
-end
-
-"""
-    RiemannSolution{L<:PyThermo.Chemical, R<:PyThermo.Chemical}
-
-Container struct for Riemann problem solution at material interfaces.
-
-This struct stores the solution to the Riemann problem when a shock or other
-discontinuity encounters an interface between two different gases. It contains
-the left and right post-wave states, interface conditions, and wave speeds.
+This struct stores the complete solution of the Riemann problem for two gases in contact,
+including the star region properties (interface conditions), star densities for both gases,
+and all relevant wave speeds. All properties can be accessed using dot notation.
 
 # Fields
-- `left_state::L`: Post-reflected-wave gas state (left side)
-- `right_state::R`: Post-transmitted-wave gas state (right side)
-- `interface_velocity::Float64`: Contact surface velocity [m/s]
-- `interface_pressure::Float64`: Pressure at contact surface [Pa]
-- `left_wave_speed::Float64`: Reflected wave speed [m/s] (negative if leftward)
-- `right_wave_speed::Float64`: Transmitted wave speed [m/s] (positive if rightward)
-- `left_wave_type::Symbol`: Type of reflected wave (`:shock` or `:expansion`)
-- `right_wave_type::Symbol`: Type of transmitted wave (`:shock` or `:expansion`)
-
-# Accessor Functions
-Convenient accessor functions return Unitful quantities:
-- `interface_velocity(rs)`: Returns velocity with units
-- `interface_pressure(rs)`: Returns pressure with units
-- `left_wave_speed(rs)`: Returns wave speed with units
-- `right_wave_speed(rs)`: Returns wave speed with units
+- `p_star::Unitful.Pressure`: Pressure at the interface (star region)
+- `u_star::Unitful.Velocity`: Velocity at the interface (star region)
+- `rho_star_L::typeof(1.0u"kg/m^3")`: Density of left gas in star region
+- `rho_star_R::typeof(1.0u"kg/m^3")`: Density of right gas in star region
+- `T_star_L::Unitful.Temperature`: Temperature of left gas in star region
+- `T_star_R::Unitful.Temperature`: Temperature of right gas in star region
+- `S_L::Unitful.Velocity`: Left wave speed (shock or rarefaction head)
+- `S_R::Unitful.Velocity`: Right wave speed (shock or rarefaction head)
+- `S_contact::Unitful.Velocity`: Contact discontinuity speed
+- `gamma_L::Float64`: Isentropic exponent of left gas
+- `gamma_R::Float64`: Isentropic exponent of right gas
 
 # Examples
 ```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful)
-julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01]);
+julia> left = Species("N2", P=500u"kPa", T=600u"K");
 
-julia> shocked_air, _ = shockjump(air, 2.0);
+julia> right = Species("SF6", P=100u"kPa", T=300u"K");
 
-julia> sf6 = Species("SF6");
+julia> sol = riemann_interface(left, right);
 
-julia> sol = riemann_interface(shocked_air, sf6);
+julia> sol.p_star
+272.57 kPa
 
-julia> sol.left_wave_type
-:expansion
-
-julia> sol.right_wave_type
-:shock
+julia> sol.u_star
+233.9 m s^-1
 ```
 
 # See Also
 - [`riemann_interface`](@ref): Function that creates `RiemannSolution` objects
 """
-struct RiemannSolution{L<:PyThermo.Chemical, R<:PyThermo.Chemical}
-    left_state::L
-    right_state::R
-    interface_velocity::Float64      # m/s
-    interface_pressure::Float64      # Pa
-    left_wave_speed::Float64         # m/s (negative if leftward)
-    right_wave_speed::Float64        # m/s (positive if rightward)
-    left_wave_type::Symbol           # :shock or :expansion
-    right_wave_type::Symbol          # :shock or :expansion
+struct RiemannSolution{P<:Unitful.Pressure, V<:Unitful.Velocity, D<:typeof(1.0u"kg/m^3"), T<:Unitful.Temperature}
+    p_star::P
+    u_star::V
+    rho_star_L::D
+    rho_star_R::D
+    T_star_L::T
+    T_star_R::T
+    S_L::V
+    S_R::V
+    S_contact::V
+    gamma_L::Float64
+    gamma_R::Float64
 end
 
-# Accessor functions for Unitful quantities
-"""
-    interface_velocity(rs::RiemannSolution) -> Unitful.Velocity
-
-Get the interface velocity with units from a RiemannSolution.
-"""
-interface_velocity(rs::RiemannSolution) = rs.interface_velocity * u"m/s"
-
-"""
-    interface_pressure(rs::RiemannSolution) -> Unitful.Pressure
-
-Get the interface pressure with units from a RiemannSolution.
-"""
-interface_pressure(rs::RiemannSolution) = rs.interface_pressure * u"Pa"
-
-"""
-    left_wave_speed(rs::RiemannSolution) -> Unitful.Velocity
-
-Get the left wave speed with units from a RiemannSolution.
-"""
-left_wave_speed(rs::RiemannSolution) = rs.left_wave_speed * u"m/s"
-
-"""
-    right_wave_speed(rs::RiemannSolution) -> Unitful.Velocity
-
-Get the right wave speed with units from a RiemannSolution.
-"""
-right_wave_speed(rs::RiemannSolution) = rs.right_wave_speed * u"m/s"
-
-function Base.show(io::IO, rs::RiemannSolution)
-    ush(u, val) = @sprintf("%0.4g", ustrip(u, val))
-    printstate(s) = join((ush(u"kPa", pressure(s)),
-                          ush(u"K", temperature(s)),
-                          ush(u"kg/m^3", density(s)),
-                          ush(u"m/s", soundspeed(s))), " | ")
-    
-    left_dir = rs.left_wave_speed < 0 ? "←" : "→"
-    right_dir = rs.right_wave_speed > 0 ? "→" : "←"
-    
-    println(io, "RiemannSolution:")
-    println(io, "  Left wave:  $(rs.left_wave_type) $(left_dir) $(@sprintf("%0.4g", abs(rs.left_wave_speed))) m/s")
-    println(io, "  Right wave: $(rs.right_wave_type) $(right_dir) $(@sprintf("%0.4g", abs(rs.right_wave_speed))) m/s")
-    println(io, "  Interface:  u* = $(@sprintf("%0.4g", rs.interface_velocity)) m/s, p* = $(@sprintf("%0.4g", rs.interface_pressure/1e3)) kPa")
-    println(io, "")
-    println(io, "  State       |  P [kPa] | T [K] | ρ [kg/m³] | cₛ [m/s]")
-    println(io, "  ──────────────────────────────────────────────────────────")
-    println(io, "  Left        | $(printstate(rs.left_state))")
-    println(io, "  Right       | $(printstate(rs.right_state))")
+function Base.show(io::IO, sol::RiemannSolution)
+    @printf(io, "RiemannSolution:\n")
+    @printf(io, "  Interface: p* = %0.3g %s, u* = %0.3g %s\n",
+            ustrip(u"kPa", sol.p_star), "kPa",
+            ustrip(u"m/s", sol.u_star), "m/s")
+    @printf(io, "  Left  state: ρ = %0.3g kg/m³, T = %0.3g K, S_L = %0.3g m/s\n",
+            ustrip(u"kg/m^3", sol.rho_star_L),
+            ustrip(u"K", sol.T_star_L),
+            ustrip(u"m/s", sol.S_L))
+    @printf(io, "  Right state: ρ = %0.3g kg/m³, T = %0.3g K, S_R = %0.3g m/s",
+            ustrip(u"kg/m^3", sol.rho_star_R),
+            ustrip(u"K", sol.T_star_R),
+            ustrip(u"m/s", sol.S_R))
 end
 
 """
-    riemann_interface(left_gas::Chemical, right_gas::Chemical; 
-                     p_star_guess=nothing, max_iter=50, tol=1e-6) -> RiemannSolution
+    riemann_interface(left::Chemical, right::Chemical, u_left=0.0, u_right=0.0) -> RiemannSolution
+    riemann_interface(left::Chemical, right::Chemical, Ms::Real) -> RiemannSolution
 
-Solve the Riemann problem at a material interface between two gases.
+Solve the exact Riemann problem for two gases in contact at an interface.
 
-This function solves for the waves (shock or expansion) that arise when two gases at
-different states meet at an interface. It's particularly useful for analyzing shock
-transmission through material interfaces in shock tubes.
+This function uses the exact Riemann solver to determine the post-shock state at a gas
+interface, including pressure, velocity, densities, temperatures, and wave speeds for
+both gases. The solution accounts for different isentropic exponents (γ) on each side
+of the interface.
 
 # Parameters
-- `left_gas`: Initial state of the left gas (e.g., post-shock gas)
-- `right_gas`: Initial state of the right gas (e.g., unshocked test gas)
-- `p_star_guess`: Optional initial guess for interface pressure (can be Unitful or Float64 in Pa)
-- `max_iter`: Maximum iterations for pressure convergence (default: 50)
-- `tol`: Convergence tolerance for velocity matching (default: 1e-6 m/s)
+
+## Method 1: Direct specification of states and velocities
+- `left::Chemical`: Left gas state (Species or Mixture)
+- `right::Chemical`: Right gas state (Species or Mixture)
+- `u_left`: Velocity of left gas (default 0.0, can have Unitful units or be in m/s)
+- `u_right`: Velocity of right gas (default 0.0, can have Unitful units or be in m/s)
+
+## Method 2: Shock tube convenience method
+- `left::Chemical`: Unshocked driven gas (will be passed through shock)
+- `right::Chemical`: Right gas state (Species or Mixture, assumed at rest)
+- `Ms::Real`: Incident shock Mach number
+
+When using Method 2, the function automatically:
+1. Applies shock jump conditions to the left gas at the given Mach number
+2. Computes the post-shock velocity
+3. Solves the Riemann problem with the shocked left state
+4. Assumes right gas is at rest (u_right = 0)
 
 # Returns
 A [`RiemannSolution`](@ref) struct containing:
-- Post-wave states for both gases
-- Interface velocity and pressure
-- Wave speeds and types (shock or expansion)
+- Interface pressure and velocity
+- Star region densities and temperatures for both gases
+- Wave speeds (left wave, right wave, contact discontinuity)
+- Isentropic exponents for reference
 
 # Physics
-The solver iterates to find the interface pressure where:
-1. Velocities match at the contact surface (u_left = u_right = u*)
-2. Pressures match at the contact surface (p_left = p_right = p*)
-
-Wave types are automatically determined:
-- If p* > p0: shock wave
-- If p* < p0: expansion wave
+The exact Riemann solver:
+1. Iteratively solves for the star region pressure using Newton-Raphson
+2. Computes the star region velocity from momentum conservation
+3. Calculates star region densities from Rankine-Hugoniot relations (shock) or isentropic relations (rarefaction)
+4. Determines temperatures from the ideal gas law
+5. Computes all wave speeds
 
 # Examples
+
+Direct specification of states:
 ```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful)
-julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01]);
+julia> left = Species("N2", P=500u"kPa", T=600u"K");
 
-julia> shocked_air, _ = shockjump(air, 2.0);
+julia> right = Species("SF6", P=100u"kPa", T=300u"K");
 
-julia> sf6 = Species("SF6");
+julia> sol = riemann_interface(left, right);
 
-julia> sol = riemann_interface(shocked_air, sf6);
+julia> round(ustrip(u"kPa", sol.p_star), digits=1)
+272.6
 
-julia> round(sol.interface_velocity, digits=1)
-304.6
+julia> round(ustrip(u"m/s", sol.u_star), digits=1)
+233.9
+```
 
-julia> sol.right_wave_type
-:shock
+Shock tube convenience method:
+```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful)
+julia> driven = Species("N2");
+
+julia> test_gas = Species("SF6");
+
+julia> sol = riemann_interface(driven, test_gas, 1.5);
+
+julia> round(ustrip(u"m/s", sol.S_contact), digits=1)
+256.2
 ```
 
 # See Also
 - [`RiemannSolution`](@ref): Result container struct
-- [`shockjump`](@ref): Calculate simple shock jump conditions
+- [`shockjump`](@ref): Calculate shock jump conditions
 """
-function riemann_interface(left_gas::Chemical, right_gas::Chemical; 
-                          p_star_guess=nothing, max_iter=50, tol=1e-6)
-    # Extract initial conditions in MKS
-    pL = left_gas.P
-    pR = right_gas.P
-    uL = 0.0  # Assume stationary in lab frame initially
-    uR = 0.0
+function riemann_interface(left::Chemical, right::Chemical, u_left=0.0, u_right=0.0)
+    # Extract primitive variables
+    rho_L = ustrip(u"kg/m^3", density(left))
+    p_L = ustrip(u"Pa", pressure(left))
+    rho_R = ustrip(u"kg/m^3", density(right))
+    p_R = ustrip(u"Pa", pressure(right))
     
-    # Initial guess for interface pressure
-    p_star = if p_star_guess isa Unitful.Pressure
-        Float64(ustrip(u"Pa", p_star_guess))
-    elseif p_star_guess isa Number
-        Float64(p_star_guess)
-    else
-        # Default: geometric mean of pressures
-        sqrt(pL * pR)
-    end
+    # Handle velocities (convert to m/s if Unitful)
+    u_L = u_left isa Unitful.Velocity ? ustrip(u"m/s", u_left) : Float64(u_left)
+    u_R = u_right isa Unitful.Velocity ? ustrip(u"m/s", u_right) : Float64(u_right)
     
-    # Iteratively solve for interface pressure using secant method
-    p_old = p_star
-    f_old = 0.0
+    # Get isentropic exponents
+    gamma_L = γ(left)
+    gamma_R = γ(right)
     
-    for iter in 1:max_iter
-        # Determine wave types
-        left_type = p_star > pL ? :shock : :expansion
-        right_type = p_star > pR ? :shock : :expansion
-        
-        # Calculate velocity changes (always positive magnitudes)
-        duL = if left_type == :shock
-            shock_pressure_velocity(left_gas, p_star)
-        else
-            expansion_pressure_velocity(left_gas, p_star)
-        end
-        
-        duR = if right_type == :shock
-            shock_pressure_velocity(right_gas, p_star)
-        else
-            expansion_pressure_velocity(right_gas, p_star)
-        end
-        
-        # Velocity at interface from left and right
-        # Both gases should converge to the same velocity at the interface
-        # For gases initially at rest (uL = uR = 0):
-        # - Left: expansion accelerates gas rightward → u_star = uL + duL
-        # - Right: shock accelerates gas rightward → u_star = uR + duR
-        # Both should be positive and equal at convergence
-        u_left = uL + duL
-        u_right = uR + duR
-        
-        # Residual: difference in velocities
-        f = u_left - u_right
-        
-        # Check convergence
-        if abs(f) < tol
-            # Found solution! Create final states
-            left_final = copy(left_gas)
-            left_final.P = p_star
-            if left_type == :shock
-                # Use shock relations
-                γL = isentropic_exponent(left_gas)
-                pr = p_star / pL
-                α = (γL + 1) / (γL - 1)
-                tr = pr * (pr + α) / (1 + α * pr)
-                left_final.T = left_gas.T * tr
-            else
-                # Use isentropic relations
-                γL = isentropic_exponent(left_gas)
-                left_final.T = left_gas.T * (p_star / pL)^((γL - 1) / γL)
-            end
-            
-            right_final = copy(right_gas)
-            right_final.P = p_star
-            if right_type == :shock
-                γR = isentropic_exponent(right_gas)
-                pr = p_star / pR
-                α = (γR + 1) / (γR - 1)
-                tr = pr * (pr + α) / (1 + α * pr)
-                right_final.T = right_gas.T * tr
-            else
-                γR = isentropic_exponent(right_gas)
-                right_final.T = right_gas.T * (p_star / pR)^((γR - 1) / γR)
-            end
-            
-            u_star = u_left  # Could also use u_right, they're equal
-            
-            # Calculate wave speeds in lab frame
-            left_speed = if left_type == :shock
-                uL - wave_velocity(left_gas, p_star, :shock)
-            else
-                uL - wave_velocity(left_gas, p_star, :expansion)
-            end
-            
-            right_speed = if right_type == :shock
-                uR + wave_velocity(right_gas, p_star, :shock)
-            else
-                uR + wave_velocity(right_gas, p_star, :expansion)
-            end
-            
-            return RiemannSolution(left_final, right_final, u_star, p_star,
-                                  left_speed, right_speed, left_type, right_type)
-        end
-        
-        # Secant method update
-        if iter > 1
-            dp = -f * (p_star - p_old) / (f - f_old)
-            p_old = p_star
-            f_old = f
-            p_star = p_star + dp
-        else
-            # First iteration: simple perturbation
-            f_old = f
-            p_old = p_star
-            p_star = p_star * 1.01
-        end
-        
-        # Ensure pressure stays positive and reasonable
-        p_star = clamp(p_star, min(pL, pR) * 0.01, max(pL, pR) * 100)
-    end
+    # Call exact Riemann solver at interface (x/t = 0)
+    WL = [rho_L, u_L, p_L]
+    WR = [rho_R, u_R, p_R]
     
-    error("Riemann solver failed to converge after $max_iter iterations")
+    _, p_star, u_star, rho_star_L, rho_star_R, S_L, S_R, S_contact, _ = 
+        exact_riemann_solver(WL, WR, gamma_L, gamma_R, 0.0)
+    
+    # Calculate temperatures using ideal gas law: P = ρ R_specific T
+    R_L = ustrip(u"J/(kg*K)", R_specific(left))
+    R_R = ustrip(u"J/(kg*K)", R_specific(right))
+    T_star_L = p_star / (rho_star_L * R_L)
+    T_star_R = p_star / (rho_star_R * R_R)
+    
+    # Return with units
+    return RiemannSolution(
+        p_star * u"Pa",
+        u_star * u"m/s",
+        rho_star_L * u"kg/m^3",
+        rho_star_R * u"kg/m^3",
+        T_star_L * u"K",
+        T_star_R * u"K",
+        S_L * u"m/s",
+        S_R * u"m/s",
+        S_contact * u"m/s",
+        gamma_L,
+        gamma_R
+    )
 end
+
+"""
+    riemann_interface(left::Chemical, right::Chemical, Ms::Real) -> RiemannSolution
+
+Convenience method for shock tube problems: automatically applies shock jump conditions
+to the left gas and solves the Riemann problem.
+
+This method assumes:
+- `left` is the unshocked driven gas
+- `right` is at rest (u_right = 0)
+- A shock of Mach number `Ms` passes through the left gas
+
+The function computes the shocked state and velocity of the left gas, then solves
+the exact Riemann problem at the interface.
+
+# Parameters
+- `left::Chemical`: Unshocked driven gas (will be passed through shock at Ms)
+- `right::Chemical`: Test gas at rest
+- `Ms::Real`: Incident shock Mach number
+
+# Returns
+A [`RiemannSolution`](@ref) with the interface solution
+
+# Examples
+```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful)
+julia> driven = Species("N2");
+
+julia> test_gas = Species("SF6");
+
+julia> sol = riemann_interface(driven, test_gas, 1.5);
+
+julia> round(ustrip(u"m/s", sol.S_contact), digits=1)
+256.2
+```
+"""
+function riemann_interface(left::Chemical, right::Chemical, Ms::Real)
+    # Apply shock jump to left gas
+    shocked_left, u_left = shockjump(left, Ms)
+    
+    # Solve Riemann problem with shocked state moving at u_left, right gas at rest
+    return riemann_interface(shocked_left, right, u_left, 0.0)
+end
+
 
 end # module

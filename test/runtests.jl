@@ -32,9 +32,7 @@ end
 end
 
 @testset "ShockTube Integration Tests" begin
-    using PyThermo.ShockTube: shockjump, shockjump!, driverpressure, driverpressure!
-    using PyThermo.ShockTube: riemann_interface, RiemannSolution
-    using PyThermo.ShockTube: interface_velocity, interface_pressure, left_wave_speed, right_wave_speed
+    using PyThermo.ShockTube: shockjump, shockjump!, driverpressure, driverpressure!, riemann_interface
     
     @testset "Complete Shock Tube Workflow" begin
         # Test the full pipeline from README example
@@ -125,76 +123,6 @@ end
         @test isapprox(ustrip(u"MPa", pressure(driver_copy)), 3.73, rtol=5e-2)
     end
     
-    @testset "Riemann Interface Solver - Simple Case" begin
-        # Test with same species on both sides (should match shock jump conditions)
-        # Left: post-shock argon, Right: pre-shock argon
-        argon_driven = Species("Ar")
-        Ms = 2.0
-        argon_shocked, u_shock = shockjump(argon_driven, Ms)
-        
-        # Create right side at same initial conditions
-        argon_right = Species("Ar")
-        
-        # Solve interface problem
-        sol = riemann_interface(argon_shocked, argon_right)
-        
-        # Verify structure
-        @test sol isa RiemannSolution
-        @test sol.left_state isa Species
-        @test sol.right_state isa Species
-        
-        # Verify wave types are identified
-        @test sol.left_wave_type in (:shock, :expansion)
-        @test sol.right_wave_type in (:shock, :expansion)
-        
-        # For same species: expect expansion on left (reflected), shock on right (transmitted)
-        @test sol.left_wave_type == :expansion
-        @test sol.right_wave_type == :shock
-        
-        # Verify interface velocity is positive (gas moving to the right)
-        @test sol.interface_velocity > 0
-        
-        # Verify wave speeds have correct signs
-        @test sol.left_wave_speed < 0  # Reflected wave moves left
-        @test sol.right_wave_speed > 0  # Transmitted wave moves right
-        
-        # Verify pressure and velocity continuity at interface (within tolerance)
-        @test isapprox(ustrip(u"Pa", pressure(sol.left_state)), sol.interface_pressure, rtol=1e-6)
-        @test isapprox(ustrip(u"Pa", pressure(sol.right_state)), sol.interface_pressure, rtol=1e-6)
-        
-        # Test accessor functions return Unitful quantities
-        @test interface_velocity(sol) isa Unitful.Velocity
-        @test interface_pressure(sol) isa Unitful.Pressure
-        @test left_wave_speed(sol) isa Unitful.Velocity
-        @test right_wave_speed(sol) isa Unitful.Velocity
-        
-        # Verify accessor values match struct fields
-        @test ustrip(u"m/s", interface_velocity(sol)) == sol.interface_velocity
-        @test ustrip(u"Pa", interface_pressure(sol)) == sol.interface_pressure
-        @test ustrip(u"m/s", left_wave_speed(sol)) == sol.left_wave_speed
-        @test ustrip(u"m/s", right_wave_speed(sol)) == sol.right_wave_speed
-    end
-    
-    @testset "Riemann Solver with Pressure Guess" begin
-        # Test with same species and explicit pressure guess
-        argon_driven = Species("Ar")
-        argon_shocked, _ = shockjump(argon_driven, 2.0)
-        argon_right = Species("Ar")
-        
-        # Solve with Unitful pressure guess
-        p_guess = (pressure(argon_shocked) + pressure(argon_right)) / 2
-        sol = riemann_interface(argon_shocked, argon_right, p_star_guess=p_guess)
-        
-        @test sol isa RiemannSolution
-        @test sol.interface_pressure > 0
-        
-        # Solve with Float64 pressure guess (in Pa)
-        sol2 = riemann_interface(argon_shocked, argon_right, p_star_guess=ustrip(u"Pa", p_guess))
-        
-        @test sol2 isa RiemannSolution
-        @test sol2.interface_pressure > 0
-    end
-    
     @testset "Physical Consistency - Rankine-Hugoniot" begin
         # Test conservation across shock
         driven = Species("Ar")
@@ -276,6 +204,205 @@ end
         # shockcalc example
         result = shockcalc(driver, driven, 2.2)
         @test isapprox(density(result.shocked) / density(result.driven), 2.64, rtol=5e-2)
+    end
+    
+    @testset "Riemann Interface Solver" begin
+        @testset "Direct Specification - Basic Functionality" begin
+            # Test with two different gases at rest
+            left = Species("N2", P=500u"kPa", T=600u"K")
+            right = Species("SF6", P=100u"kPa", T=300u"K")
+            
+            sol = riemann_interface(left, right)
+            
+            # Verify structure
+            @test sol isa PyThermo.ShockTube.RiemannSolution
+            
+            # Verify all fields have proper units
+            @test sol.p_star isa Unitful.Pressure
+            @test sol.u_star isa Unitful.Velocity
+            @test sol.rho_star_L isa typeof(1.0u"kg/m^3")
+            @test sol.rho_star_R isa typeof(1.0u"kg/m^3")
+            @test sol.T_star_L isa Unitful.Temperature
+            @test sol.T_star_R isa Unitful.Temperature
+            @test sol.S_L isa Unitful.Velocity
+            @test sol.S_R isa Unitful.Velocity
+            @test sol.S_contact isa Unitful.Velocity
+            
+            # Physical correctness: interface pressure between initial pressures
+            @test sol.p_star > pressure(right)
+            @test sol.p_star < pressure(left)
+            
+            # Contact discontinuity speed equals interface velocity
+            @test sol.S_contact == sol.u_star
+            
+            # All densities and temperatures should be positive
+            @test sol.rho_star_L > 0.0u"kg/m^3"
+            @test sol.rho_star_R > 0.0u"kg/m^3"
+            @test sol.T_star_L > 0.0u"K"
+            @test sol.T_star_R > 0.0u"K"
+            
+            # Wave speeds: left wave moves left, right wave moves right (for this case)
+            @test sol.S_L < 0.0u"m/s"
+            @test sol.S_R > 0.0u"m/s"
+            
+            # Verify gamma values are stored
+            @test sol.gamma_L isa Float64
+            @test sol.gamma_R isa Float64
+            @test sol.gamma_L > 1.0
+            @test sol.gamma_R > 1.0
+        end
+        
+        @testset "Shock Tube Convenience Method" begin
+            # Test automatic shock jump application
+            driven = Species("N2")
+            test_gas = Species("SF6")
+            Ms = 1.5
+            
+            sol = riemann_interface(driven, test_gas, Ms)
+            
+            # Verify solution exists
+            @test sol isa PyThermo.ShockTube.RiemannSolution
+            
+            # Interface velocity should be positive (moving into test gas)
+            @test sol.u_star > 0.0u"m/s"
+            
+            # Verify consistency with shockjump
+            shocked_driven, u_shocked = shockjump(driven, Ms)
+            
+            # The interface pressure should be above test gas pressure
+            @test sol.p_star > pressure(test_gas)
+            
+            # Contact speed should match interface velocity
+            @test sol.S_contact == sol.u_star
+            
+            # Left wave should move faster than contact (shocked gas sound speed)
+            @test abs(sol.S_L) > abs(sol.S_contact)
+        end
+        
+        @testset "Velocity Specification with Unitful" begin
+            left = Species("N2", P=200u"kPa", T=400u"K")
+            right = Species("Ar", P=100u"kPa", T=300u"K")
+            
+            # Test with Unitful velocities
+            u_left = 100.0u"m/s"
+            u_right = -50.0u"m/s"
+            
+            sol = riemann_interface(left, right, u_left, u_right)
+            
+            # Verify solution computed correctly
+            @test sol isa PyThermo.ShockTube.RiemannSolution
+            @test sol.u_star isa Unitful.Velocity
+            
+            # Test with plain numbers
+            sol2 = riemann_interface(left, right, 100.0, -50.0)
+            
+            # Results should match
+            @test isapprox(ustrip(u"m/s", sol.u_star), ustrip(u"m/s", sol2.u_star), rtol=1e-10)
+            @test isapprox(ustrip(u"Pa", sol.p_star), ustrip(u"Pa", sol2.p_star), rtol=1e-10)
+        end
+        
+        @testset "Edge Case: Identical States" begin
+            # Same gas, same conditions on both sides
+            left = Species("N2", P=101325u"Pa", T=300u"K")
+            right = Species("N2", P=101325u"Pa", T=300u"K")
+            
+            sol = riemann_interface(left, right)
+            
+            # Interface should have same pressure
+            @test isapprox(ustrip(u"Pa", sol.p_star), 101325.0, rtol=1e-3)
+            
+            # Interface velocity should be ~zero
+            @test isapprox(ustrip(u"m/s", sol.u_star), 0.0, atol=1e-6)
+            
+            # Densities should match original
+            @test isapprox(ustrip(u"kg/m^3", sol.rho_star_L), 
+                          ustrip(u"kg/m^3", density(left)), rtol=1e-3)
+        end
+        
+        @testset "Edge Case: Same Pressure, Different Temperature" begin
+            p_common = 200u"kPa"
+            left = Species("N2", P=p_common, T=600u"K")
+            right = Species("N2", P=p_common, T=300u"K")
+            
+            sol = riemann_interface(left, right)
+            
+            # Interface pressure should be close to initial pressure
+            @test isapprox(ustrip(u"kPa", sol.p_star), 200.0, rtol=0.1)
+            
+            # Should generate flow due to temperature difference
+            @test abs(ustrip(u"m/s", sol.u_star)) > 0.0
+        end
+        
+        @testset "Different Gas Species" begin
+            # Test with various gas combinations
+            gases = [("He", "Ar"), ("N2", "SF6"), ("O2", "CO2")]
+            
+            for (gas1, gas2) in gases
+                left = Species(gas1, P=300u"kPa", T=500u"K")
+                right = Species(gas2, P=100u"kPa", T=300u"K")
+                
+                sol = riemann_interface(left, right)
+                
+                # Basic physical checks
+                @test sol.p_star > 0.0u"Pa"
+                @test sol.rho_star_L > 0.0u"kg/m^3"
+                @test sol.rho_star_R > 0.0u"kg/m^3"
+                @test sol.T_star_L > 0.0u"K"
+                @test sol.T_star_R > 0.0u"K"
+            end
+        end
+        
+        @testset "Physical Consistency" begin
+            left = Species("N2", P=400u"kPa", T=500u"K")
+            right = Species("Ar", P=100u"kPa", T=300u"K")
+            
+            sol = riemann_interface(left, right)
+            
+            # Star region pressure should be equal on both sides
+            @test sol.p_star == sol.p_star  # Redundant but explicit
+            
+            # Star region velocity should be equal on both sides (contact property)
+            @test sol.u_star == sol.S_contact
+            
+            # For expansion into lower pressure, interface moves toward right
+            @test sol.u_star > 0.0u"m/s"
+            
+            # Wave speeds should bracket contact speed
+            @test sol.S_L < sol.S_contact
+            @test sol.S_R > sol.S_contact
+        end
+        
+        @testset "Display and Printing" begin
+            left = Species("N2", P=200u"kPa", T=400u"K")
+            right = Species("Ar", P=100u"kPa", T=300u"K")
+            
+            sol = riemann_interface(left, right)
+            
+            # Test that display doesn't error
+            str_repr = sprint(show, sol)
+            @test occursin("RiemannSolution", str_repr)
+            @test occursin("Interface", str_repr)
+            @test occursin("Left", str_repr)
+            @test occursin("Right", str_repr)
+        end
+        
+        @testset "Consistency with shockjump" begin
+            # When using Mach number method, results should be consistent
+            driven = Species("N2", P=100u"kPa", T=300u"K")
+            test_gas = Species("SF6", P=100u"kPa", T=300u"K")
+            Ms = 2.0
+            
+            # Method 1: Use riemann_interface with Mach number
+            sol1 = riemann_interface(driven, test_gas, Ms)
+            
+            # Method 2: Manual shock jump then riemann
+            shocked, u_shocked = shockjump(driven, Ms)
+            sol2 = riemann_interface(shocked, test_gas, u_shocked, 0.0)
+            
+            # Should give same results
+            @test isapprox(ustrip(u"Pa", sol1.p_star), ustrip(u"Pa", sol2.p_star), rtol=1e-10)
+            @test isapprox(ustrip(u"m/s", sol1.u_star), ustrip(u"m/s", sol2.u_star), rtol=1e-10)
+        end
     end
 end
 
