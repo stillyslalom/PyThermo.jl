@@ -53,8 +53,8 @@ julia> round(Int, ustrip(u"m/s", velocity))
 ```
 
 # See Also
-- [`shockcalc`](@ref): Comprehensive shock tube calculation
-- [`driverpressure`](@ref): Calculate required driver pressure
+- [`shockcalc!`](@ref): Comprehensive shock tube calculation
+- [`driverpressure!`](@ref): Calculate required driver pressure
 """
 function shockjump!(gas, Mach)
     α1 = (γ(gas) + 1) / (γ(gas) - 1)
@@ -107,8 +107,8 @@ julia> round(typeof(1.0u"MPa"), pressure(driver_calc), digits=2)
 ```
 
 # See Also
-- [`shockjump`](@ref): Calculate shock jump conditions
-- [`shockcalc`](@ref): Comprehensive shock tube calculation
+- [`shockjump!`](@ref): Calculate shock jump conditions
+- [`shockcalc!`](@ref): Comprehensive shock tube calculation
 """
 function driverpressure!(driver, driven, Ms)
     γ1, γ4 = γ(driven), γ(driver)
@@ -165,7 +165,7 @@ julia> round(typeof(1.0u"kPa"), pressure(result.shocked), digits=1)
 ```
 
 # See Also
-- [`shockcalc`](@ref): Function that creates `ShockCalc` objects
+- [`shockcalc!`](@ref): Function that creates `ShockCalc` objects
 """
 struct ShockCalc{DR<:PyThermo.Chemical,DV<:PyThermo.Chemical,U<:Unitful.Velocity}
     driver::DR
@@ -235,7 +235,7 @@ julia> driver = Species("He")
 Species(He, 298.1 K, 1.013e+05 Pa)
 
 julia> driven = Mixture(["He" => 0.95, "acetone" => 0.05], T = 18u"°C", P = 85u"kPa")
-Mixture(95.0% helium, 5.00% acetone, 291.1 K, 8.500e+04 Pa)
+Mixture(95% He, 5% acetone, 291.1 K, 8.500e+04 Pa)
 
 julia> result = shockcalc(driver, driven, 2.2);
 
@@ -251,8 +251,8 @@ The calculation follows standard shock tube theory:
 4. Returns complete state information for analysis
 
 # See Also
-- [`shockjump`](@ref): Calculate shock jump conditions only
-- [`driverpressure`](@ref): Calculate required driver pressure only
+- [`shockjump!`](@ref): Calculate shock jump conditions only
+- [`driverpressure!`](@ref): Calculate required driver pressure only
 - [`ShockCalc`](@ref): Result container struct
 """
 function shockcalc!(driver, driven, Ms)
@@ -302,7 +302,7 @@ julia> round(u"m/s", sol.u_star, digits=1)
 ```
 
 # See Also
-- [`riemann_interface`](@ref): Function that creates `RiemannSolution` objects
+- [`shockcalc!`](@ref): Function that creates `ShockCalc` objects
 """
 struct RiemannSolution{P<:Unitful.Pressure, V<:Unitful.Velocity, D<:Unitful.Density, T<:Unitful.Temperature}
     p_star::P
@@ -409,7 +409,7 @@ julia> round(ustrip(u"m/s", sol.S_contact), digits=1)
 
 # See Also
 - [`RiemannSolution`](@ref): Result container struct
-- [`shockjump`](@ref): Calculate shock jump conditions
+- [`shockjump!`](@ref): Calculate shock jump conditions
 """
 function riemann_interface(left::Chemical, right::Chemical, u_left=0.0, u_right=0.0)
     # Extract primitive variables

@@ -25,7 +25,7 @@ using PyThermo.ShockTube
 driven = Species("N2", P=100u"kPa", T=300u"K")
 
 # Calculate shock jump for Mach 2.0 shock
-shocked, velocity = shockjump(driven, 2.0)
+shocked, velocity = shockjump!(driven, 2.0)
 
 println("Post-shock pressure: ", pressure(shocked))
 println("Post-shock temperature: ", temperature(shocked))
@@ -51,7 +51,7 @@ driven = Mixture(["He" => 0.95, "acetone" => 0.05], T=18u"°C", P=85u"kPa")
 Ms = 2.2
 
 # Calculate required driver pressure
-driver_calc = driverpressure(driver, driven, Ms)
+driver_calc = driverpressure!(driver, driven, Ms)
 println("Required driver pressure: ", pressure(driver_calc))
 # Output: ~3.73 MPa
 ```
@@ -73,7 +73,7 @@ driver = Species("He")
 driven = Mixture(["He" => 0.95, "acetone" => 0.05], T=18u"°C", P=85u"kPa")
 Ms = 2.2
 
-result = shockcalc(driver, driven, Ms)
+result = shockcalc!(driver, driven, Ms)
 
 # Access all states
 println("Initial driven state: ", result.driven)
@@ -168,7 +168,7 @@ This is equivalent to:
 
 ```julia
 # Manual approach
-shocked, u_shocked = shockjump(driven, Ms)
+shocked, u_shocked = shockjump!(driven, Ms)
 sol = riemann_interface(shocked, test_gas, u_shocked, 0.0)
 ```
 
@@ -277,7 +277,7 @@ driven = Mixture(["He" => 0.95, "acetone" => 0.05], T=18u"°C", P=85u"kPa")
 Ms = 2.2
 
 # Complete calculation
-result = shockcalc(driver, driven, Ms)
+result = shockcalc!(driver, driven, Ms)
 
 println("=== Shock Tube Results ===")
 println("Incident shock Mach: ", result.Ms)
@@ -354,13 +354,12 @@ end
 ## API reference
 
 ```@docs
-shockjump
 shockjump!
-driverpressure
 driverpressure!
-shockcalc
 shockcalc!
+ShockCalc
 riemann_interface
+RiemannSolution
 ```
 
 ## Theory background
