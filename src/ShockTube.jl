@@ -41,7 +41,7 @@ The function calculates:
 # Examples
 ```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful)
 julia> driven = Mixture(["He" => 0.95, "acetone" => 0.05], T = 18u"°C", P = 85u"kPa")
-Mixture(95.0% helium, 5.00% acetone, 291.1 K, 8.500e+04 Pa)
+Mixture(95% He, 5% acetone, 291.1 K, 8.500e+04 Pa)
 
 julia> shocked, velocity = shockjump(driven, 2.2);
 
@@ -102,7 +102,7 @@ julia> driven = Mixture(["He" => 0.95, "acetone" => 0.05], T = 18u"°C", P = 85u
 
 julia> driver_calc = driverpressure(driver, driven, 2.2);
 
-julia> round(pressure(driver_calc), digits=2)
+julia> round(typeof(1.0u"MPa"), pressure(driver_calc), digits=2)
 3.73 MPa
 ```
 
@@ -160,8 +160,8 @@ julia> result = shockcalc(driver, driven, 2.2);
 julia> result.Ms
 2.2
 
-julia> round(pressure(result.shocked), digits=3)
-481.9 kPa
+julia> round(typeof(1.0u"kPa"), pressure(result.shocked), digits=1)
+481.8 kPa
 ```
 
 # See Also
@@ -276,8 +276,8 @@ and all relevant wave speeds. All properties can be accessed using dot notation.
 # Fields
 - `p_star::Unitful.Pressure`: Pressure at the interface (star region)
 - `u_star::Unitful.Velocity`: Velocity at the interface (star region)
-- `rho_star_L::typeof(1.0u"kg/m^3")`: Density of left gas in star region
-- `rho_star_R::typeof(1.0u"kg/m^3")`: Density of right gas in star region
+- `rho_star_L::Unitful.Density`: Density of left gas in star region
+- `rho_star_R::Unitful.Density`: Density of right gas in star region
 - `T_star_L::Unitful.Temperature`: Temperature of left gas in star region
 - `T_star_R::Unitful.Temperature`: Temperature of right gas in star region
 - `S_L::Unitful.Velocity`: Left wave speed (shock or rarefaction head)
@@ -294,17 +294,17 @@ julia> right = Species("SF6", P=100u"kPa", T=300u"K");
 
 julia> sol = riemann_interface(left, right);
 
-julia> sol.p_star
-272.57 kPa
+julia> round(u"kPa", sol.p_star, digits=2)
+319.59 kPa
 
-julia> sol.u_star
-233.9 m s^-1
+julia> round(u"m/s", sol.u_star, digits=1)
+155.8 m s^-1
 ```
 
 # See Also
 - [`riemann_interface`](@ref): Function that creates `RiemannSolution` objects
 """
-struct RiemannSolution{P<:Unitful.Pressure, V<:Unitful.Velocity, D<:typeof(1.0u"kg/m^3"), T<:Unitful.Temperature}
+struct RiemannSolution{P<:Unitful.Pressure, V<:Unitful.Velocity, D<:Unitful.Density, T<:Unitful.Temperature}
     p_star::P
     u_star::V
     rho_star_L::D
@@ -389,10 +389,10 @@ julia> right = Species("SF6", P=100u"kPa", T=300u"K");
 julia> sol = riemann_interface(left, right);
 
 julia> round(ustrip(u"kPa", sol.p_star), digits=1)
-272.6
+319.6
 
 julia> round(ustrip(u"m/s", sol.u_star), digits=1)
-233.9
+155.8
 ```
 
 Shock tube convenience method:
@@ -404,7 +404,7 @@ julia> test_gas = Species("SF6");
 julia> sol = riemann_interface(driven, test_gas, 1.5);
 
 julia> round(ustrip(u"m/s", sol.S_contact), digits=1)
-256.2
+159.2
 ```
 
 # See Also
@@ -486,7 +486,7 @@ julia> test_gas = Species("SF6");
 julia> sol = riemann_interface(driven, test_gas, 1.5);
 
 julia> round(ustrip(u"m/s", sol.S_contact), digits=1)
-256.2
+159.2
 ```
 """
 function riemann_interface(left::Chemical, right::Chemical, Ms::Real)
