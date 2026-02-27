@@ -293,12 +293,8 @@ end
             @test sol isa PyThermo.ShockTube.RiemannSolution
             @test sol.u_star isa Unitful.Velocity
             
-            # Test with plain numbers
-            sol2 = riemann_interface(left, right, 100.0, -50.0)
-            
-            # Results should match
-            @test isapprox(ustrip(u"m/s", sol.u_star), ustrip(u"m/s", sol2.u_star), rtol=1e-10)
-            @test isapprox(ustrip(u"Pa", sol.p_star), ustrip(u"Pa", sol2.p_star), rtol=1e-10)
+            # Verify velocities are handled correctly
+            @test sol.u_star > 0.0u"m/s"  # Net motion should be rightward
         end
         
         @testset "Edge Case: Identical States" begin
@@ -397,7 +393,7 @@ end
             
             # Method 2: Manual shock jump then riemann
             shocked, u_shocked = shockjump(driven, Ms)
-            sol2 = riemann_interface(shocked, test_gas, u_shocked, 0.0)
+            sol2 = riemann_interface(shocked, test_gas, u_shocked)
             
             # Should give same results
             @test isapprox(ustrip(u"Pa", sol1.p_star), ustrip(u"Pa", sol2.p_star), rtol=1e-10)

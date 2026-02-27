@@ -140,9 +140,6 @@ right = Species("Ar", P=100u"kPa", T=300u"K")
 
 # Left gas moving right at 100 m/s, right gas moving left at 50 m/s
 sol = riemann_interface(left, right, 100.0u"m/s", -50.0u"m/s")
-
-# Or use plain numbers (interpreted as m/s)
-sol = riemann_interface(left, right, 100.0, -50.0)
 ```
 
 ### Shock tube convenience method

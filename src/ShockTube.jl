@@ -334,7 +334,7 @@ function Base.show(io::IO, sol::RiemannSolution)
 end
 
 """
-    riemann_interface(left::Chemical, right::Chemical, u_left=0.0, u_right=0.0) -> RiemannSolution
+    riemann_interface(left::Chemical, right::Chemical, u_left=0.0u"m/s", u_right=0.0u"m/s") -> RiemannSolution
     riemann_interface(left::Chemical, right::Chemical, Ms::Real) -> RiemannSolution
 
 Solve the exact Riemann problem for two gases in contact at an interface.
@@ -349,8 +349,8 @@ of the interface.
 ## Method 1: Direct specification of states and velocities
 - `left::Chemical`: Left gas state (Species or Mixture)
 - `right::Chemical`: Right gas state (Species or Mixture)
-- `u_left`: Velocity of left gas (default 0.0, can have Unitful units or be in m/s)
-- `u_right`: Velocity of right gas (default 0.0, can have Unitful units or be in m/s)
+- `u_left::Unitful.Velocity`: Velocity of left gas (default 0.0u"m/s")
+- `u_right::Unitful.Velocity`: Velocity of right gas (default 0.0u"m/s")
 
 ## Method 2: Shock tube convenience method
 - `left::Chemical`: Unshocked driven gas (will be passed through shock)
@@ -395,6 +395,18 @@ julia> round(ustrip(u"m/s", sol.u_star), digits=1)
 155.8
 ```
 
+With velocities:
+```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful)
+julia> left = Species("N2", P=200u"kPa", T=400u"K");
+
+julia> right = Species("Ar", P=100u"kPa", T=300u"K");
+
+julia> sol = riemann_interface(left, right, 100.0u"m/s", -50.0u"m/s");
+
+julia> sol.u_star > 0.0u"m/s"
+true
+```
+
 Shock tube convenience method:
 ```jldoctest; setup = :(using PyThermo, PyThermo.ShockTube, Unitful)
 julia> driven = Species("N2");
@@ -411,16 +423,18 @@ julia> round(ustrip(u"m/s", sol.S_contact), digits=1)
 - [`RiemannSolution`](@ref): Result container struct
 - [`shockjump!`](@ref): Calculate shock jump conditions
 """
-function riemann_interface(left::Chemical, right::Chemical, u_left=0.0, u_right=0.0)
+function riemann_interface(left::Chemical, right::Chemical, 
+                          u_left::Unitful.Velocity=0.0u"m/s", 
+                          u_right::Unitful.Velocity=0.0u"m/s")
     # Extract primitive variables
     rho_L = ustrip(u"kg/m^3", density(left))
     p_L = ustrip(u"Pa", pressure(left))
     rho_R = ustrip(u"kg/m^3", density(right))
     p_R = ustrip(u"Pa", pressure(right))
     
-    # Handle velocities (convert to m/s if Unitful)
-    u_L = u_left isa Unitful.Velocity ? ustrip(u"m/s", u_left) : Float64(u_left)
-    u_R = u_right isa Unitful.Velocity ? ustrip(u"m/s", u_right) : Float64(u_right)
+    # Convert velocities to m/s
+    u_L = ustrip(u"m/s", u_left)
+    u_R = ustrip(u"m/s", u_right)
     
     # Get isentropic exponents
     gamma_L = γ(left)
@@ -494,7 +508,7 @@ function riemann_interface(left::Chemical, right::Chemical, Ms::Real)
     shocked_left, u_left = shockjump(left, Ms)
     
     # Solve Riemann problem with shocked state moving at u_left, right gas at rest
-    return riemann_interface(shocked_left, right, u_left, 0.0)
+    return riemann_interface(shocked_left, right, u_left, 0.0u"m/s")
 end
 
 
