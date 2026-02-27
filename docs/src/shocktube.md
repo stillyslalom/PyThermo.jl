@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = PyThermo
+CurrentModule = PyThermo.ShockTube
 ```
 # ShockTube module
 
