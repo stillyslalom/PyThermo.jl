@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = PyThermo.ShockTube
+CurrentModule = PyThermo
 ```
 # ShockTube module
 
@@ -30,9 +30,9 @@ driven = Species("N2", P=100u"kPa", T=300u"K")
 # Calculate shock jump for Mach 2.0 shock
 shocked, velocity = shockjump!(driven, 2.0)
 
-println("Post-shock pressure: ", pressure(shocked))
-println("Post-shock temperature: ", temperature(shocked))
-println("Flow velocity: ", velocity)
+pressure(shocked)    # post-shock pressure
+temperature(shocked) # post-shock temperature
+velocity             # flow velocity
 ```
 
 The `shockjump!` variant modifies the input state in-place:
@@ -55,8 +55,7 @@ Ms = 2.2
 
 # Calculate required driver pressure
 driver_calc = driverpressure!(driver, driven, Ms)
-println("Required driver pressure: ", pressure(driver_calc))
-# Output: ~3.73 MPa
+pressure(driver_calc) # required driver pressure (~3.73 MPa)
 ```
 
 The `driverpressure!` variant modifies the driver state in-place:
@@ -79,24 +78,23 @@ Ms = 2.2
 result = shockcalc!(driver, driven, Ms)
 
 # Access all states
-println("Initial driven state: ", result.driven)
-println("Shocked state: ", result.shocked)
-println("Reflected shock state: ", result.reflected)
-println("Driver state: ", result.driver)
+result.driven    # initial driven state
+result.shocked   # shocked state
+result.reflected # reflected shock state
+result.driver    # driver state
 
 # Access flow properties
-println("Incident shock Mach: ", result.Ms)
-println("Reflected shock Mach: ", result.Mr)
-println("Post-shock velocity: ", result.u2)
+result.Ms # incident shock Mach
+result.Mr # reflected shock Mach
+result.u2 # post-shock velocity
 
 # Density ratio (useful for test time estimation)
-println("Density ratio: ", density(result.shocked) / density(result.driven))
-# Output: ~2.64
+density(result.shocked) / density(result.driven) # ~2.64
 ```
 
 ## Riemann interface solver
 
-The exact Riemann solver analyzes the interaction between two gases initially separated by a diaphragm. When the diaphragm is removed (or when a shock reaches the interface), waves propagate into both gases and an interface (contact discontinuity) forms.
+The exact Riemann solver analyzes the interaction between two adjacent gases with differing properties.
 
 ### Basic usage: Direct specification
 
@@ -113,23 +111,23 @@ right = Species("SF6", P=100u"kPa", T=300u"K")
 sol = riemann_interface(left, right)
 
 # Interface properties
-println("Interface pressure: ", sol.p_star)
-println("Interface velocity: ", sol.u_star)
-println("Contact speed: ", sol.S_contact)
+sol.p_star    # interface pressure
+sol.u_star    # interface velocity
+sol.S_contact # contact discontinuity speed
 
 # Post-wave states
-println("Left star density: ", sol.rho_star_L)
-println("Right star density: ", sol.rho_star_R)
-println("Left star temperature: ", sol.T_star_L)
-println("Right star temperature: ", sol.T_star_R)
+sol.rho_star_L # left star density
+sol.rho_star_R # right star density
+sol.T_star_L   # left star temperature
+sol.T_star_R   # right star temperature
 
 # Wave speeds
-println("Left wave speed: ", sol.S_L)
-println("Right wave speed: ", sol.S_R)
+sol.S_L # left wave speed
+sol.S_R # right wave speed
 
 # Gamma values
-println("Left gamma: ", sol.gamma_L)
-println("Right gamma: ", sol.gamma_R)
+sol.gamma_L # left gas isentropic exponent
+sol.gamma_R # right gas isentropic exponent
 ```
 
 ### With initial velocities
@@ -163,8 +161,8 @@ Ms = 2.0
 # then solves interface with test gas
 sol = riemann_interface(driven, test_gas, Ms)
 
-println("Interface pressure: ", sol.p_star)
-println("Interface velocity: ", sol.u_star)
+sol.p_star # interface pressure
+sol.u_star # interface velocity
 ```
 
 This is equivalent to:
@@ -226,20 +224,11 @@ sol = riemann_interface(left, right)
 
 # High pressure on left causes expansion wave into left gas
 # and compression (shock) into right gas
-if sol.p_star < pressure(left)
-    println("Left wave is rarefaction")
-end
-
-if sol.p_star > pressure(right)
-    println("Right wave is shock")
-end
+sol.p_star < pressure(left)  # left wave is rarefaction
+sol.p_star > pressure(right) # right wave is shock
 
 # Interface moves toward lower pressure region
-if sol.u_star > 0.0u"m/s"
-    println("Interface moving right")
-else
-    println("Interface moving left")
-end
+sol.u_star > 0.0u"m/s" # interface moving right if true, left if false
 
 # Wave speeds bracket the contact
 @assert sol.S_L < sol.S_contact < sol.S_R
@@ -257,9 +246,9 @@ println(sol)
 Output:
 ```
 RiemannSolution:
-  Interface: p* = 234.5 kPa, u* = 123.4 m/s
-  Left:  ρ* = 2.345 kg/m³, T* = 456.7 K, S = -234.5 m/s
-  Right: ρ* = 3.456 kg/m³, T* = 345.6 K, S = 345.6 m/s
+  Interface: p* = 229 kPa, u* = 175 m/s
+  Left  state: ρ = 1.81 kg/m³, T = 427 K, S_L = -454 m/s
+  Right state: ρ = 2.59 kg/m³, T = 425 K, S_R = 460 m/s
 ```
 
 ## Examples
@@ -282,17 +271,20 @@ Ms = 2.2
 # Complete calculation
 result = shockcalc!(driver, driven, Ms)
 
-println("=== Shock Tube Results ===")
-println("Incident shock Mach: ", result.Ms)
-println("Post-shock velocity: ", result.u2)
-println("Post-shock pressure: ", pressure(result.shocked))
-println("Post-shock temperature: ", temperature(result.shocked))
-println("Density ratio: ", density(result.shocked) / density(result.driven))
-println("\nReflected shock:")
-println("  Mach number: ", result.Mr)
-println("  Pressure: ", pressure(result.reflected))
-println("  Temperature: ", temperature(result.reflected))
-println("\nRequired driver pressure: ", pressure(result.driver))
+# Shock tube results
+result.Ms                                        # incident shock Mach
+result.u2                                        # post-shock velocity
+pressure(result.shocked)                         # post-shock pressure
+temperature(result.shocked)                      # post-shock temperature
+density(result.shocked) / density(result.driven) # density ratio
+
+# Reflected shock
+result.Mr                     # reflected shock Mach number
+pressure(result.reflected)    # reflected shock pressure
+temperature(result.reflected) # reflected shock temperature
+
+# Driver requirements
+pressure(result.driver) # required driver pressure
 ```
 
 ### Example 2: Gas-gas interface analysis
@@ -313,18 +305,21 @@ Ms = 1.8
 # Solve interface problem
 sol = riemann_interface(driven, test_gas, Ms)
 
-println("=== Interface Analysis ===")
-println("Interface pressure: ", sol.p_star)
-println("Interface velocity: ", sol.u_star)
-println("\nLeft (shocked N2) properties:")
-println("  Density: ", sol.rho_star_L)
-println("  Temperature: ", sol.T_star_L)
-println("  Wave speed: ", sol.S_L)
-println("\nRight (SF6) properties:")
-println("  Density: ", sol.rho_star_R)
-println("  Temperature: ", sol.T_star_R)
-println("  Wave speed: ", sol.S_R)
-println("\nContact discontinuity speed: ", sol.S_contact)
+# Interface analysis
+sol.p_star # interface pressure
+sol.u_star # interface velocity
+
+# Left (shocked N2) properties
+sol.rho_star_L # density
+sol.T_star_L   # temperature
+sol.S_L        # wave speed
+
+# Right (SF6) properties
+sol.rho_star_R # density
+sol.T_star_R   # temperature
+sol.S_R        # wave speed
+
+sol.S_contact # contact discontinuity speed
 ```
 
 ### Example 3: Different gas combinations
@@ -340,17 +335,17 @@ left = Species("He", P=300u"kPa", T=500u"K")
 # Different right gases
 gases = ["Ar", "N2", "SF6", "CO2"]
 
-println("Gas pair comparisons (left = He at 300 kPa, 500 K):")
+# Gas pair comparisons (left = He at 300 kPa, 500 K)
 for gas in gases
     right = Species(gas, P=100u"kPa", T=300u"K")
     sol = riemann_interface(left, right)
     
-    println("\nHe / $gas:")
-    println("  p* = ", sol.p_star)
-    println("  u* = ", sol.u_star)
-    println("  ρ*_L = ", sol.rho_star_L)
-    println("  ρ*_R = ", sol.rho_star_R)
-    println("  Density jump = ", sol.rho_star_L / sol.rho_star_R)
+    # He / gas results:
+    sol.p_star                      # interface pressure
+    sol.u_star                      # interface velocity
+    sol.rho_star_L                  # left star density
+    sol.rho_star_R                  # right star density
+    sol.rho_star_L / sol.rho_star_R # density jump
 end
 ```
 
