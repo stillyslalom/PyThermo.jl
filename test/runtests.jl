@@ -137,6 +137,104 @@ end
     end
 end
 
+@testset "Identity, composition, optional constants" begin
+    @testset "Identity (Species)" begin
+        N2 = Species("N2", T=300u"K", P=1u"atm")
+        @test unit(molecular_weight(N2)) == u"g/mol"
+        @test isapprox(ustrip(u"g/mol", molecular_weight(N2)), 28.0134, rtol=1e-3)
+        @test CAS(N2) == "7727-37-9"
+        @test formula(N2) == "N2"
+        @test phase(N2) === :gas
+
+        # CAS/formula are not defined on Mixture.
+        air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
+        @test_throws MethodError CAS(air)
+        @test_throws MethodError formula(air)
+    end
+
+    @testset "Phase dispatch returns Symbol" begin
+        # Liquid phase
+        water = Species("water", T=300u"K", P=1u"atm")
+        @test phase(water) === :liquid
+
+        # Solid phase via setstate!
+        SF6 = setstate!(Species("SF6"), T=20u"K")
+        @test phase(SF6) === :solid
+    end
+
+    @testset "Mixture composition" begin
+        air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
+        @test unit(molecular_weight(air)) == u"g/mol"
+        # Mole-fraction-weighted MW of air ≈ 28.96 g/mol
+        @test isapprox(ustrip(u"g/mol", molecular_weight(air)), 28.96, atol=0.1)
+        @test phase(air) === :gas
+
+        zs = mole_fractions(air)
+        @test zs isa Vector{Float64}
+        @test length(zs) == 3
+        @test isapprox(sum(zs), 1.0, atol=1e-9)
+        @test isapprox(zs[1], 0.78, atol=1e-9)
+        @test isapprox(zs[2], 0.21, atol=1e-9)
+        @test isapprox(zs[3], 0.01, atol=1e-9)
+
+        ws = mass_fractions(air)
+        @test ws isa Vector{Float64}
+        @test length(ws) == 3
+        @test isapprox(sum(ws), 1.0, atol=1e-9)
+        # N2 mass fraction in air is ~0.755 (N2 is lighter than the average).
+        @test isapprox(ws[1], 0.755, atol=0.01)
+
+        comps = components(air)
+        @test comps isa Vector{Pair{String, Float64}}
+        @test length(comps) == 3
+        @test isapprox(comps[1].second, 0.78, atol=1e-9)
+        @test isapprox(comps[2].second, 0.21, atol=1e-9)
+        @test isapprox(comps[3].second, 0.01, atol=1e-9)
+        # IDs are normalized to thermo's canonical names (lowercase).
+        @test all(p -> p.first isa String && !isempty(p.first), comps)
+    end
+
+    @testset "Optional constants — present" begin
+        N2 = Species("N2")
+        Tc = T_critical(N2)
+        @test Tc isa Unitful.Temperature
+        @test isapprox(ustrip(u"K", Tc), 126.2, atol=1.0)
+
+        Pc = P_critical(N2)
+        @test Pc isa Unitful.Pressure
+        @test isapprox(ustrip(u"MPa", Pc), 3.40, atol=0.1)
+
+        ω = acentric_factor(N2)
+        @test ω isa Float64
+        @test isapprox(ω, 0.04, atol=0.01)
+
+        Tb = T_boiling(N2)
+        @test Tb isa Unitful.Temperature
+        @test isapprox(ustrip(u"K", Tb), 77.36, atol=0.5)
+
+        # Liquid water has both Hvap and Psat.
+        water = Species("water", T=300u"K", P=1u"atm")
+        hv = enthalpy_vaporization(water)
+        @test hv isa Quantity
+        @test unit(hv) == u"J/kg"
+        @test isapprox(ustrip(u"J/kg", hv), 2.44e6, rtol=0.05)
+
+        ps = P_saturation(water)
+        @test ps isa Quantity
+        @test unit(ps) == u"Pa"
+        @test isapprox(ustrip(u"Pa", ps), 3540, rtol=0.1)
+    end
+
+    @testset "Optional constants — missing path" begin
+        # Helium at room temperature is far above its critical point (Tc ≈
+        # 5.2 K). thermo's Hvap correlation returns None outside the valid
+        # range, which exercises the `missing`-return path in
+        # `_wrap_optional`.
+        He = Species("He", T=298.15u"K", P=1u"atm")
+        @test ismissing(enthalpy_vaporization(He))
+    end
+end
+
 @testset "setstate!" begin
     SF6 = Species("SF6")
     @test SF6.phase == "g"

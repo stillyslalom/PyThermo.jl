@@ -62,18 +62,24 @@ PyThermo.jl is registered in Julia's general package repository and can be insta
    Installed PyThermo ─ v0.2.0
 ```
 
-### Future development
+### Curated accessors
 
-- [ ] Add `Unitful` accessors for more properties
-- [ ] Use `missing` instead of `nothing` for missing properties
+A curated set of Unitful Julia accessors is now available for the bulk of
+the commonly-used `thermo` properties — see the
+[Property accessors](https://stillyslalom.github.io/PyThermo.jl/stable/properties/)
+page of the docs for the full list and a `thermo`-name → PyThermo-name
+cheatsheet. State variables and state-dependent properties (T, P, ρ, Cp,
+μ, k, …) are strict; per-substance constants with a real likelihood of
+being absent from the database (Tc, Pc, ω, Tb, Hvap, Psat) return
+`missing` rather than throwing.
 
-`soundspeed` now evaluates a real-gas formula via the chemical's cubic EOS
+`soundspeed` evaluates a real-gas formula via the chemical's cubic EOS
 (Peng-Robinson by default) for `Species`, and forwards to thermo's
 `speed_of_sound` for `Mixture`. The previous ideal-gas √(γRT) expression is
 recovered for near-ideal species but yields noticeably different values for
 dense or strongly non-ideal gases (e.g. SF6 above ~1 atm).
 
-A new `setstate!(c; T, P)` helper avoids the phase-change footgun shown above
+A `setstate!(c; T, P)` helper avoids the phase-change footgun shown above
 by routing temperature/pressure updates through thermo's `calculate` method.
 
 ### Easter eggs

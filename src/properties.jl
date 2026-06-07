@@ -231,3 +231,113 @@ Isobaric expansion coefficient β = (1/V)(∂V/∂T)_P at the chemical's current
 @thermo_property joule_thomson JT u"K/Pa" false (gas=:JTg, liquid=:JTl) """
 Joule-Thomson coefficient μ_JT = (∂T/∂P)_H at the chemical's current state.
 """
+
+# --- Optional constants (Union{Quantity, Missing}) ---
+#
+# These are per-substance constants that may genuinely be absent from thermo's
+# database for unusual chemicals. The wrappers return `missing` when the
+# Python attribute is `None`. For mixtures, where a single critical-point or
+# vaporization value may not be defined, `missing` is also the expected
+# return.
+
+@thermo_property T_critical Tc u"K" true nothing """
+Critical-point temperature. Returns `missing` if not available.
+"""
+
+@thermo_property P_critical Pc u"Pa" true nothing """
+Critical-point pressure. Returns `missing` if not available.
+"""
+
+@thermo_property acentric_factor omega NoUnits true nothing """
+Pitzer acentric factor ω. Dimensionless. Returns `missing` if not available.
+"""
+
+@thermo_property T_boiling Tb u"K" true nothing """
+Normal boiling point (1 atm). Returns `missing` if not available.
+"""
+
+@thermo_property enthalpy_vaporization Hvap u"J/kg" true nothing """
+Specific enthalpy of vaporization at the chemical's current temperature.
+Returns `missing` if the chemical is above its critical point or has no
+vaporization data.
+"""
+
+@thermo_property P_saturation Psat u"Pa" true nothing """
+Vapor pressure at the chemical's current temperature. Returns `missing` if
+the chemical is above its critical point or has no Psat correlation.
+"""
+
+# --- Identity (hand-written) ---
+#
+# These return strings or `Symbol`s rather than `Quantity`s, so the macro's
+# `_wrap_strict` plumbing doesn't fit. `molecular_weight` could go through
+# the macro, but lives here next to the other identity accessors.
+
+"""
+    molecular_weight(c::Chemical) -> Quantity{g/mol}
+
+Molecular weight. For mixtures, this is the mole-fraction-weighted average
+of the component molecular weights.
+
+Note: thermo's `MW` attribute is in g/mol, not kg/mol; the returned
+`Quantity` preserves that unit.
+"""
+molecular_weight(c::Chemical) = pyconvert(Float64, Py(c).MW) * u"g/mol"
+
+"""
+    CAS(s::Species) -> String
+
+CAS registry number. Defined on `Species` only; for the per-component CAS
+numbers of a `Mixture`, use the property fallthrough (`m.CASs`).
+"""
+CAS(s::Species) = pyconvert(String, Py(s).CAS)
+
+"""
+    formula(s::Species) -> String
+
+Empirical chemical formula. Defined on `Species` only.
+"""
+formula(s::Species) = pyconvert(String, Py(s).formula)
+
+"""
+    phase(c::Chemical) -> Symbol
+
+Aggregate phase at the chemical's current state — one of `:gas`, `:liquid`,
+`:solid`. Throws `ErrorException` if thermo returns an unrecognized phase
+string.
+"""
+function phase(c::Chemical)
+    p = pyconvert(Union{String, Nothing}, Py(c).phase)
+    p == "g" ? :gas    :
+    p == "l" ? :liquid :
+    p == "s" ? :solid  :
+    error("unknown phase $(repr(p)) — expected \"g\", \"l\", or \"s\"")
+end
+
+# --- Composition (Mixture-only, hand-written) ---
+
+"""
+    mole_fractions(m::Mixture) -> Vector{Float64}
+
+Mole fractions of the mixture's components, in the same order as `m.IDs`.
+"""
+mole_fractions(m::Mixture) = pyconvert(Vector{Float64}, Py(m).zs)
+
+"""
+    mass_fractions(m::Mixture) -> Vector{Float64}
+
+Mass fractions of the mixture's components, in the same order as `m.IDs`.
+"""
+mass_fractions(m::Mixture) = pyconvert(Vector{Float64}, Py(m).ws)
+
+"""
+    components(m::Mixture) -> Vector{Pair{String, Float64}}
+
+Mixture composition as a vector of `"ID" => mole_fraction` pairs. The order
+matches `m.IDs`.
+"""
+function components(m::Mixture)
+    ids = pyconvert(Vector{String}, Py(m).IDs)
+    zs  = pyconvert(Vector{Float64}, Py(m).zs)
+    return [id => z for (id, z) in zip(ids, zs)]
+end

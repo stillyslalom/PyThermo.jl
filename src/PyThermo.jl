@@ -28,6 +28,9 @@ export heat_capacity, molar_heat_capacity
 export enthalpy, molar_enthalpy, entropy, molar_entropy, internal_energy, molar_internal_energy
 export viscosity, kinematic_viscosity, thermal_conductivity, thermal_diffusivity, prandtl, surface_tension
 export isobaric_expansion, joule_thomson
+export molecular_weight, CAS, formula, phase
+export mole_fractions, mass_fractions, components
+export T_critical, P_critical, acentric_factor, T_boiling, enthalpy_vaporization, P_saturation
 export setstate!
 
 include("init.jl")
@@ -215,24 +218,54 @@ include("properties.jl")
 # `properties.jl`; the four below are kept hand-written because they don't
 # need pyconvert plumbing (`T`/`P` already come back as `Float64`) or because
 # their natural form is the bare dimensionless number returned by Python.
+
+"""
+    temperature(c::Chemical) -> Quantity{K}
+
+Temperature at the chemical's current state.
+"""
 temperature(c::Chemical) = c.T * u"K"
+
+"""
+    pressure(c::Chemical) -> Quantity{Pa}
+
+Pressure at the chemical's current state.
+"""
 pressure(c::Chemical)    = c.P * u"Pa"
+
+"""
+    isentropic_exponent(c::Chemical) -> Float64
+
+Isentropic exponent γ = Cp / Cv at the chemical's current state.
+Dimensionless.
+"""
 isentropic_exponent(c::Chemical) = c.isentropic_exponent
+
+"""
+    R_specific(c::Chemical) -> Quantity{J/(kg·K)}
+
+Mass-basis specific gas constant R / MW.
+"""
 R_specific(c::Chemical)  = c.R_specific * u"J/(kg*K)"
 
-# Real-gas sound speed.
-#
-# `Mixture` exposes `speed_of_sound` directly; we forward to it.
-#
-# `Species`/`Chemical` does not, so we use its attached cubic EOS (Peng-Robinson
-# by default) to evaluate
-#
-#     a² = γ_real · (∂P/∂ρ_mass)_T
-#
-# with `γ_real = (Cpgm + Cp_dep_g) / (Cvgm + Cv_dep_g)` and
-# `(∂P/∂ρ_mass)_T = eos.dP_drho_g / MW`. This is gas-phase only — for liquid
-# or solid phases the formula falls back to the ideal-gas expression because
-# `Cv_dep_l` / `Cp_dep_l` are not exposed by thermo 0.4.
+"""
+    soundspeed(c::Chemical) -> Quantity{m/s}
+
+Real-gas sound speed at the chemical's current state.
+
+For a `Mixture`, forwards to thermo's `speed_of_sound` directly.
+
+For a `Species`, uses the attached cubic EOS (Peng-Robinson by default) to
+evaluate
+
+    a² = γ_real · (∂P/∂ρ_mass)_T
+
+with `γ_real = (Cpgm + Cp_dep_g) / (Cvgm + Cv_dep_g)` and
+`(∂P/∂ρ_mass)_T = eos.dP_drho_g / MW`. The EOS-derived path is gas-phase
+only — for non-gas phases or for species whose EOS does not expose
+departure derivatives (e.g. helium in the supercritical-at-STP regime), the
+ideal-gas formula `a = √(γ R T)` is used instead.
+"""
 soundspeed(c::Mixture) = pyconvert(Float64, Py(c).speed_of_sound) * u"m/s"
 
 function soundspeed(c::Species)
