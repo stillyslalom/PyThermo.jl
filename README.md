@@ -12,7 +12,7 @@ julia> argon = Species("Ar", P = 101325, T = 300)
 Species(Ar, 300.0 K, 1.013e+05 Pa)
 
 julia> density(argon)
-1.6237570273514512 kg m^-3
+1.6227671732556135 kg m^-3
 
 julia> argon.molecular_diameter # Angstrom
 3.40744
@@ -22,10 +22,10 @@ If left unspecified, the pressure and temperature are set to STP. if given as `F
 julia> using Unitful
 
 julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01], P = 1u"atm")
-Mixture(78% nitrogen, 21% oxygen, 1% argon, 298.1 K, 1.013e+05 Pa)
+Mixture(78% N2, 21% O2, 1% Ar, 298.1 K, 1.013e+05 Pa)
 
 julia> air.Cp
-1004.1326426200408
+1004.3091399287284
 ```
 
 ### Combining mixtures and species
@@ -63,7 +63,7 @@ julia> SF6 = Species("SF6", P=30u"psi")
 Species(SF6, 298.1 K, 2.068e+05 Pa)
 
 julia> SF6.GWP # global warming potential
-22800.0
+16300.0
 
 julia> SF6.phase # one of "g", "l", "s"
 "g"
@@ -72,7 +72,7 @@ julia> SF6.T = 20u"K"
 20 K
 
 julia> density(SF6)
-181.67446044245906 kg m^-3
+181.6743991134152 kg m^-3
 
 julia> SF6.phase # that's not right!
 "g"
@@ -120,23 +120,23 @@ julia> driver = Species("He")
 Species(He, 298.1 K, 1.013e+05 Pa)
 
 julia> driven = Mixture(["He" => 0.95, "acetone" => 0.05], T = 18u"°C", P = 85u"kPa")
-Mixture(95% helium, 5% acetone, 291.1 K, 8.500e+04 Pa)
+Mixture(95% He, 5% acetone, 291.1 K, 8.500e+04 Pa)
 
 julia> shockjump(driven, 2.2) # find shock jump conditions
-(Mixture(95% helium, 5% acetone, 623.7 K, 4.819e+05 Pa), 1023.9438673559401 m s^-1)
+(Mixture(95% He, 5% acetone, 623.6 K, 4.818e+05 Pa), 1023.9538914888177 m s^-1)
 
 julia> shockcalc(driver, driven, 2.2) # calculate shock states for M=2.2
   Region    P [MPa] T [K] ρ [kg/m³] cₛ [m/s]
   ––––––––– ––––––– ––––– ––––––––– ––––––––
-  Driver     3.732  298.1   5.92      1016
+  Driver     3.732  298.1   6.025     1016
   Driven     0.085  291.1  0.2355    748.1
-  Shocked   0.4819  623.7  0.6231     1066  
-  Reflected  1.754  1003    1.408     1332
+  Shocked   0.4818  623.6  0.6232     1095
+  Reflected  1.755  1003    1.412     1388
 
-Driver gas: helium
-Driven gas: 95% helium, 5% acetone
-Post-shock velocity: 1024 m/s
+  Incident wave: 1646 m/s (Mach 2.2)
+  Reflected wave: 1965 m/s (Mach 1.795)
+  Post-shock velocity: 1024 m/s
 
 julia> density(ans.shocked) / density(ans.driven)
-2.64075735975203
+2.6465904286501147
 ```
