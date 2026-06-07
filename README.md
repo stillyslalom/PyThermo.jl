@@ -32,13 +32,17 @@ julia> air.Cp
 
 A `Mixture` can be assembled from existing `Species`, other `Mixture`s, or
 chemical-name strings, given as `constituent => amount` pairs. Amounts are
-relative mole numbers (they need not sum to one), and a species appearing in
-more than one constituent is merged by CAS number.
+relative mole numbers by default (`basis=:mole`; pass `basis=:mass` for
+relative masses), they need not sum to one, and a species appearing in more
+than one constituent is merged by CAS number.
 ```julia
 julia> air = Mixture(["N2" => 0.79, "O2" => 0.21]);
 
 julia> Mixture([air => 0.8, Species("acetone") => 0.2])
 Mixture(63.2% N2, 16.8% O2, 20% acetone, 298.1 K, 1.013e+05 Pa)
+
+julia> Mixture([air => 0.8, Species("acetone") => 0.2]; basis=:mass)
+Mixture(70.3% N2, 18.7% O2, 11% acetone, 298.1 K, 1.013e+05 Pa)
 ```
 By default the result is built at STP (override with `T=`/`P=`), using only the
 constituents' composition. Passing `adiabatic=true` instead conserves enthalpy

@@ -55,6 +55,27 @@ end
         @test isapprox(zs[2], 0.21 * 0.5;       atol = 1e-9)  # O2
     end
 
+    @testset "Mass basis" begin
+        # Mass-basis amounts build via `ws`; the stored composition (mole
+        # fractions) therefore differs from the same numbers read as moles.
+        mass = Mixture([air => 0.8, Species("acetone") => 0.2]; basis = :mass)
+        ws = mass_fractions(mass)
+        @test isapprox(ws[3], 0.2; atol = 1e-9)              # acetone is 0.2 of total mass
+        @test isapprox(ws[1] / ws[2], (0.79 * 28.0134) / (0.21 * 31.998); rtol = 1e-3)
+        @test !isapprox(mole_fractions(mass),
+                        mole_fractions(Mixture([air => 0.8, Species("acetone") => 0.2]));
+                        atol = 1e-3)                          # mass ≠ mole composition
+
+        # Adiabatic mole/mass agree on T when describing the same system.
+        nN2, nO2, nAce = 0.79 * 0.85, 0.21 * 0.85, 0.15
+        Tmol = Mixture([air => 0.85, Species("acetone") => 0.15]; adiabatic = true) |> temperature
+        Tmass = Mixture(["N2" => nN2 * 28.0134, "O2" => nO2 * 31.998,
+                         "acetone" => nAce * 58.08]; adiabatic = true, basis = :mass) |> temperature
+        @test isapprox(ustrip(u"K", Tmol), ustrip(u"K", Tmass); rtol = 1e-4)
+
+        @test_throws ArgumentError Mixture([air => 1.0]; basis = :volume)
+    end
+
     @testset "String-only list matches classic constructor" begin
         a = mole_fractions(Mixture([Species("N2") => 0.79, Species("O2") => 0.21]))
         b = mole_fractions(Mixture(["N2" => 0.79, "O2" => 0.21]))

@@ -143,17 +143,30 @@ The composition can also be specified by providing a vector of `"ID" => molefrac
 
 A `Mixture` may also be built from a list of `constituent => amount` pairs,
 where each constituent is a `Species`, another `Mixture`, or a chemical-name
-`String`, and `amount` is a relative number of **moles** (the amounts need not
-sum to one). Each constituent is flattened to its components and like species
-are merged by CAS number, so a single species appearing in several
-constituents is combined into one component:
+`String`, and `amount` is a relative quantity (the amounts need not sum to
+one). By default the amounts are relative **moles** (`basis = :mole`); pass
+`basis = :mass` to treat them as relative **masses** instead. Each constituent
+is flattened to its components and like species are merged by CAS number, so a
+single species appearing in several constituents is combined into one
+component:
 
 ```$_DOCTEST
 julia> air = Mixture(["N2" => 0.79, "O2" => 0.21]);
 
 julia> Mixture([air => 0.8, Species("acetone") => 0.2])
 Mixture(63.2% N2, 16.8% O2, 20% acetone, 298.1 K, 1.013e+05 Pa)
+
+julia> Mixture([air => 0.8, Species("acetone") => 0.2]; basis = :mass)
+Mixture(70.3% N2, 18.7% O2, 11% acetone, 298.1 K, 1.013e+05 Pa)
 ```
+
+(The composition is always displayed as mole fractions, so the `:mass` result
+differs even though both lists read `0.8 / 0.2`.)
+
+This is distinct from the flat constructor's `zs`/`ws` keywords: those give
+final leaf-component fractions directly, whereas `basis` chooses how the
+per-constituent `amount`s — which may each expand to several components — are
+interpreted.
 
 By default the combined mixture is built at standard temperature and pressure
 (override with the usual `T=`/`P=` keywords); the constituents' own states are
@@ -173,6 +186,10 @@ Mixture(67.2% N2, 17.8% O2, 15% acetone, 263.0 K, 1.013e+05 Pa)
 julia> phase(mix)
 :two_phase
 ```
+
+`basis` applies here too (`:mass` conserves mass-specific enthalpy via thermo's
+`H` flash); since both bases describe the same physical system they reach the
+same equilibrium temperature for equivalent amounts.
 
 If `P` is omitted it is inherited from the constituents when they agree,
 otherwise it defaults to 1 atm. The flash relies on thermo's enthalpy solver,
@@ -197,11 +214,13 @@ Mixture(chemnames::Vector{String}; kwargs...) = Mixture(PY_CHEM.Mixture(chemname
 
 # --- Combining constituents into a Mixture ---------------------------------
 #
-# `Mixture([part => amount, ...])` builds a mixture from a list of
-# constituents — each a `Species`, a `Mixture`, or a chemical-name `String` —
-# weighted by relative *moles* (`amount`). Every constituent is flattened to
-# its components and merged by CAS number (mole amounts summed; first
-# appearance fixes ordering and the display ID). Amounts need not sum to one.
+# `Mixture([part => amount, ...]; basis = :mole)` builds a mixture from a list
+# of constituents — each a `Species`, a `Mixture`, or a chemical-name `String`
+# — weighted by a relative *amount*. With `basis = :mole` the amounts are
+# relative moles; with `basis = :mass` they are relative masses. Every
+# constituent is flattened to its components and merged by CAS number (amounts
+# summed; first appearance fixes ordering and the display ID). Amounts need not
+# sum to one.
 #
 # A bare `String` is treated as `Species(name)`, so a string-only list
 # reproduces the classic `Mixture(["N2" => 0.79, "O2" => 0.21])` behaviour.
@@ -209,48 +228,58 @@ Mixture(chemnames::Vector{String}; kwargs...) = Mixture(PY_CHEM.Mixture(chemname
 const _MixPart = Union{Chemical, AbstractString}
 
 # Merge a component into the insertion-ordered `order` list, keyed by CAS via
-# `idx`. `order` entries are (CAS, display-ID, moles).
+# `idx`. `order` entries are (CAS, display-ID, amount) — amount in moles or
+# mass depending on the caller's basis.
 function _accumulate!(idx::Dict{String,Int}, order::Vector{Tuple{String,String,Float64}},
-                      cas::AbstractString, id::AbstractString, moles::Float64)
+                      cas::AbstractString, id::AbstractString, amount::Float64)
     if haskey(idx, cas)
         i = idx[cas]
         c, d, n = order[i]
-        order[i] = (c, d, n + moles)
+        order[i] = (c, d, n + amount)
     else
-        push!(order, (String(cas), String(id), moles))
+        push!(order, (String(cas), String(id), amount))
         idx[cas] = length(order)
     end
 end
 
-_flatten_part!(idx, order, part::AbstractString, moles) =
-    _flatten_part!(idx, order, Species(String(part)), moles)
-_flatten_part!(idx, order, part::Species, moles) =
-    _accumulate!(idx, order, CAS(part), part.ID, moles)
-function _flatten_part!(idx, order, part::Mixture, moles)
-    ids  = pyconvert(Vector{String},  Py(part).IDs)
-    cass = pyconvert(Vector{String},  Py(part).CASs)
-    zs   = pyconvert(Vector{Float64}, Py(part).zs)
-    for (id, cas, z) in zip(ids, cass, zs)
-        _accumulate!(idx, order, cas, id, moles * z)
+# Flatten one constituent, splitting its `amount` across its components by the
+# constituent's own mole (`:mole`) or mass (`:mass`) fractions.
+_flatten_part!(idx, order, part::AbstractString, amount, basis) =
+    _flatten_part!(idx, order, Species(String(part)), amount, basis)
+_flatten_part!(idx, order, part::Species, amount, basis) =
+    _accumulate!(idx, order, CAS(part), part.ID, amount)
+function _flatten_part!(idx, order, part::Mixture, amount, basis)
+    ids   = pyconvert(Vector{String},  Py(part).IDs)
+    cass  = pyconvert(Vector{String},  Py(part).CASs)
+    fracs = pyconvert(Vector{Float64}, basis === :mole ? Py(part).zs : Py(part).ws)
+    for (id, cas, f) in zip(ids, cass, fracs)
+        _accumulate!(idx, order, cas, id, amount * f)
     end
 end
 
-# Property-package molar enthalpy [J/mol] of a constituent at its own state.
+# Property-package enthalpy of a constituent at its own state, molar (`:mole`,
+# `Hm` [J/mol]) or mass-specific (`:mass`, `H` [J/kg]).
 # We deliberately never read `Chemical.Hm`: a standalone `Chemical` references
 # enthalpy to its own current state (H ≈ 0), whereas a `Mixture`'s property
 # package references the gas phase at 298.15 K, so a liquid constituent carries
 # its latent heat as a negative enthalpy. Routing every constituent through a
 # property-package `Mixture` puts them all on one datum — which is what lets
-# the adiabatic enthalpy balance close.
-_pp_molar_enthalpy(m::Mixture) = pyconvert(Float64, Py(m).Hm)
-_pp_molar_enthalpy(s::Species) =
-    pyconvert(Float64, PY_CHEM.Mixture([s.ID]; zs = [1.0], T = s.T, P = s.P).Hm)
-_pp_molar_enthalpy(s::AbstractString) = _pp_molar_enthalpy(Species(String(s)))
+# the adiabatic enthalpy balance close. (The molar and mass balances are
+# equivalent: thermo converts an `H` flash target back to `Hm` via the combined
+# mixture's MW, so both bases reach the same equilibrium temperature.)
+_pp_enthalpy(m::Mixture, basis) = pyconvert(Float64, basis === :mole ? Py(m).Hm : Py(m).H)
+_pp_enthalpy(s::Species, basis) =
+    pyconvert(Float64, getproperty(PY_CHEM.Mixture([s.ID]; zs = [1.0], T = s.T, P = s.P),
+                                   basis === :mole ? :Hm : :H))
+_pp_enthalpy(s::AbstractString, basis) = _pp_enthalpy(Species(String(s)), basis)
 
 _part_pressure(c::Chemical)      = c.P
 _part_pressure(::AbstractString) = 101325.0
 
-function Mixture(parts::AbstractVector{<:Pair}; adiabatic::Bool = false, kwargs...)
+function Mixture(parts::AbstractVector{<:Pair}; adiabatic::Bool = false,
+                 basis::Symbol = :mole, kwargs...)
+    basis === :mole || basis === :mass || throw(ArgumentError(
+        "Mixture: basis must be :mole or :mass, got :$basis"))
     isempty(parts) && throw(ArgumentError("Mixture: empty constituent list"))
     idx   = Dict{String,Int}()
     order = Tuple{String,String,Float64}[]
@@ -260,12 +289,13 @@ function Mixture(parts::AbstractVector{<:Pair}; adiabatic::Bool = false, kwargs.
             "String; got $(typeof(part))"))
         amount > 0 || throw(ArgumentError(
             "Mixture: constituent amount must be positive (got $amount for $(repr(part)))"))
-        _flatten_part!(idx, order, part, Float64(amount))
+        _flatten_part!(idx, order, part, Float64(amount), basis)
     end
-    ids = String[o[2] for o in order]
-    zs  = Float64[o[3] for o in order]
+    ids    = String[o[2] for o in order]
+    fracs  = Float64[o[3] for o in order]       # leaf amounts, in `basis`
+    compkw = basis === :mole ? :zs : :ws        # thermo composition keyword
 
-    adiabatic || return Mixture(ids; zs = zs, kwargs...)
+    adiabatic || return Mixture(ids; (compkw => fracs,)..., kwargs...)
 
     # --- Adiabatic (constant-pressure, enthalpy-conserving) mixing ---------
     kw = Dict{Symbol,Any}(kwargs)
@@ -280,13 +310,14 @@ function Mixture(parts::AbstractVector{<:Pair}; adiabatic::Bool = false, kwargs.
         Ps = Float64[_part_pressure(p) for (p, _) in parts]
         all(==(first(Ps)), Ps) ? first(Ps) : 101325.0
     end
-    Htot = ntot = 0.0
+    Htot = total = 0.0      # total enthalpy [J] and total amount, in `basis`
     for (part, amount) in parts
-        w = Float64(amount)
-        Htot += w * _pp_molar_enthalpy(part)
-        ntot += w
+        a = Float64(amount)
+        Htot += a * _pp_enthalpy(part, basis)
+        total += a
     end
-    py = PY_CHEM.Mixture(ids; zs = zs, P = Pmix, Hm = Htot / ntot)
+    enthkw = basis === :mole ? :Hm : :H         # thermo enthalpy flash keyword
+    py = PY_CHEM.Mixture(ids; (compkw => fracs, :P => Pmix, enthkw => Htot / total)...)
     # A failed enthalpy flash leaves `T` as Python `None`, which would later
     # blow up with a cryptic conversion error; surface it clearly here instead.
     pyconvert(Union{Float64,Nothing}, py.T) === nothing && throw(ArgumentError(
