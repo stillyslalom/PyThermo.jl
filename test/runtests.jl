@@ -23,6 +23,63 @@ using Aqua
     end
 end
 
+@testset "soundspeed (real-gas)" begin
+    # Ideal-gas consistency: near-ideal species should match the √(γ R T) formula
+    # within 1% at low pressure.
+    for sp in ("N2", "He", "Ar")
+        c = Species(sp, T=300u"K", P=1u"atm")
+        a_real  = ustrip(u"m/s", soundspeed(c))
+        a_ideal = sqrt(isentropic_exponent(c) * ustrip(u"J/(kg*K)", R_specific(c)) * 300.0)
+        @test isapprox(a_real, a_ideal, rtol=0.01)
+    end
+
+    # Real-gas deviation: SF6 at 1 atm deviates from the ideal-gas formula by
+    # more than 1%, proving the EOS-based path is being exercised.
+    sf6 = Species("SF6", T=300u"K", P=1u"atm")
+    a_real  = ustrip(u"m/s", soundspeed(sf6))
+    a_ideal = sqrt(isentropic_exponent(sf6) * ustrip(u"J/(kg*K)", R_specific(sf6)) * 300.0)
+    @test abs(a_real - a_ideal) / a_ideal > 0.01
+
+    # Deviation grows with pressure.
+    sf6_hi = Species("SF6", T=300u"K", P=10u"atm")
+    a_hi = ustrip(u"m/s", soundspeed(sf6_hi))
+    @test abs(a_hi - a_ideal) / a_ideal > 0.1
+
+    # Mixture path goes through thermo's speed_of_sound directly.
+    air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
+    @test isapprox(ustrip(u"m/s", soundspeed(air)), 346.1, rtol=5e-3)
+end
+
+@testset "setstate!" begin
+    SF6 = Species("SF6")
+    @test SF6.phase == "g"
+
+    # README example: dropping SF6 to 20 K through the property setter does not
+    # update the phase, but setstate! does.
+    SF6_stale = Species("SF6")
+    SF6_stale.T = 20.0
+    @test SF6_stale.phase == "g"   # footgun documented in README
+
+    setstate!(SF6, T=20u"K")
+    @test SF6.phase == "s"
+    @test isapprox(SF6.T, 20.0; rtol=1e-12)
+
+    # Pressure only.
+    c = Species("N2", T=300u"K", P=1u"atm")
+    setstate!(c, P=5u"atm")
+    @test isapprox(c.P, ustrip(u"Pa", 5u"atm"); rtol=1e-12)
+    @test isapprox(c.T, 300.0; rtol=1e-12)
+
+    # Bare floats are taken as K / Pa.
+    c2 = Species("N2")
+    setstate!(c2, T=400.0, P=2e5)
+    @test isapprox(c2.T, 400.0; rtol=1e-12)
+    @test isapprox(c2.P, 2e5; rtol=1e-12)
+
+    # Returns the chemical for chaining.
+    @test setstate!(c2, T=350u"K") === c2
+end
+
 @testset "ShockTube.jl" begin
     st = shockcalc(Species("N2"), Species("Ar"), 1.8)
     @test isapprox(ustrip(pressure(st.driver)), 1.426894182009389e6, rtol=2e-3)

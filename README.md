@@ -67,6 +67,15 @@ PyThermo.jl is registered in Julia's general package repository and can be insta
 - [ ] Add `Unitful` accessors for more properties
 - [ ] Use `missing` instead of `nothing` for missing properties
 
+`soundspeed` now evaluates a real-gas formula via the chemical's cubic EOS
+(Peng-Robinson by default) for `Species`, and forwards to thermo's
+`speed_of_sound` for `Mixture`. The previous ideal-gas √(γRT) expression is
+recovered for near-ideal species but yields noticeably different values for
+dense or strongly non-ideal gases (e.g. SF6 above ~1 atm).
+
+A new `setstate!(c; T, P)` helper avoids the phase-change footgun shown above
+by routing temperature/pressure updates through thermo's `calculate` method.
+
 ### Easter eggs
 PyThermo includes a sub-module for 1D gas dynamics capable of calculating shock properties for gas species and mixtures.
 ```julia

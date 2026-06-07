@@ -23,6 +23,7 @@ import Base: convert, ==, isequal, hash, getindex, setindex!, haskey, keys, show
 export Thermo, ShockTube
 export Species, Mixture
 export isentropic_exponent, temperature, pressure, density, molar_density, R_specific, soundspeed
+export setstate!
 
 include("init.jl")
 const Thermo = PY_THERMO
@@ -203,6 +204,8 @@ haskey(c::Chemical, x) = haskey(Py(c), x)
 Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Temperature) = setproperty!(Py(c), s, _unit(T, u"K"))
 Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Pressure) = setproperty!(Py(c), s, _unit(T, u"Pa"))
 
+include("properties.jl")
+
 # Thermodynamic property accessors
 temperature(c::Chemical)  = c.T * u"K"
 pressure(c::Chemical)  = c.P * u"Pa"
@@ -210,7 +213,75 @@ density(c::Chemical)  = c.rho * u"kg/m^3"
 molar_density(c::Chemical) = c.rhom * u"mol/m^3"
 isentropic_exponent(c::Chemical)  = c.isentropic_exponent
 R_specific(c::Chemical)  = c.R_specific * u"J/(kg*K)"
-soundspeed(c::Chemical) = sqrt(isentropic_exponent(c) * R_specific(c) * temperature(c)) |> u"m/s"  
+
+# Real-gas sound speed.
+#
+# `Mixture` exposes `speed_of_sound` directly; we forward to it.
+#
+# `Species`/`Chemical` does not, so we use its attached cubic EOS (Peng-Robinson
+# by default) to evaluate
+#
+#     a² = γ_real · (∂P/∂ρ_mass)_T
+#
+# with `γ_real = (Cpgm + Cp_dep_g) / (Cvgm + Cv_dep_g)` and
+# `(∂P/∂ρ_mass)_T = eos.dP_drho_g / MW`. This is gas-phase only — for liquid
+# or solid phases the formula falls back to the ideal-gas expression because
+# `Cv_dep_l` / `Cp_dep_l` are not exposed by thermo 0.4.
+soundspeed(c::Mixture) = pyconvert(Float64, Py(c).speed_of_sound) * u"m/s"
+
+function soundspeed(c::Species)
+    phase = pyconvert(String, Py(c).phase)
+    if phase == "g"
+        # `Chemical.set_eos` rebuilds the attached EOS at the chemical's
+        # current T/P. This is necessary because direct `c.T = …` /
+        # `c.calculate(...)` mutations do not refresh the cached EOS object,
+        # so the departure derivatives read below would otherwise be stale.
+        Py(c).set_eos(T=Py(c).T, P=Py(c).P)
+        eos = Py(c).eos
+        if pyhasattr(eos, "Cp_dep_g") && pyhasattr(eos, "Cv_dep_g") && pyhasattr(eos, "dP_drho_g")
+            Cp_real = pyconvert(Float64, Py(c).Cpgm) + pyconvert(Float64, eos.Cp_dep_g)
+            Cv_real = pyconvert(Float64, Py(c).Cvgm) + pyconvert(Float64, eos.Cv_dep_g)
+            dP_drho_molar = pyconvert(Float64, eos.dP_drho_g)
+            MW_kg = pyconvert(Float64, Py(c).MW) * 1e-3
+            return sqrt((Cp_real / Cv_real) * dP_drho_molar / MW_kg) * u"m/s"
+        end
+    end
+    # Fallback: ideal-gas formula. Used for non-gas phases and for species
+    # whose attached EOS does not expose departure derivatives (e.g. helium
+    # in the supercritical-at-STP regime).
+    sqrt(isentropic_exponent(c) * R_specific(c) * temperature(c)) |> u"m/s"
+end
+
+"""
+    setstate!(c::Chemical; T=nothing, P=nothing) -> Chemical
+
+Set temperature and/or pressure and re-flash the chemical's state. Unlike
+assignment to `c.T` / `c.P`, this calls the underlying `calculate` method,
+which correctly handles phase changes.
+
+Either or both of `T` and `P` may be provided. `Unitful` quantities are
+converted to K / Pa; bare `Real` values are taken to already be in K / Pa.
+
+# Examples
+```$_DOCTEST
+julia> using Unitful
+
+julia> SF6 = Species("SF6")
+Species(SF6, 298.1 K, 1.013e+05 Pa)
+
+julia> setstate!(SF6, T=20u"K");
+
+julia> SF6.phase
+"s"
+```
+"""
+function setstate!(c::Chemical; T=nothing, P=nothing)
+    kwargs = Dict{Symbol, Float64}()
+    T !== nothing && (kwargs[:T] = T isa Unitful.Temperature ? _unit(T, u"K") : Float64(T))
+    P !== nothing && (kwargs[:P] = P isa Unitful.Pressure    ? _unit(P, u"Pa") : Float64(P))
+    Py(c).calculate(; kwargs...)
+    return c
+end
 
 include("ShockTube.jl")
 
