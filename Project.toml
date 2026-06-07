@@ -1,7 +1,7 @@
 authors = ["Alex Ames <alexander.m.ames@gmail.com> and contributors"]
 name = "PyThermo"
 uuid = "6fae04a5-42e9-4d0c-90a8-26d1a9434b6b"
-version = "0.3.2"
+version = "0.4.0"
 
 [compat]
 CondaPkg = "0.2"
@@ -32,6 +32,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [preferences.CondaPkg]
 env = "@Thermo"
+pip_backend = "uv"
 
 [targets]
 test = ["Aqua", "Test", "Unitful"]
