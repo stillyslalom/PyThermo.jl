@@ -249,6 +249,47 @@ Mass-basis specific gas constant R / MW.
 R_specific(c::Chemical)  = c.R_specific * u"J/(kg*K)"
 
 """
+    compressibility(c::Chemical) -> Float64
+    compressibility(c::Chemical, phase::Symbol) -> Float64
+
+Compressibility factor `Z = PV/(nRT)` at the chemical's current state.
+Dimensionless.
+
+For a `Mixture`, forwards to thermo's EOS-aware `Z`.
+
+For a `Species`, the no-argument call uses the attached cubic EOS
+(Peng-Robinson by default) to return the real-gas gas-phase factor
+(`eos.Z_g`), refreshing the EOS at the current T/P first. For non-gas phases,
+or for species whose EOS does not expose `Z_g` (e.g. helium in the
+supercritical-at-STP regime), it falls back to thermo's curve-based `Z`, which
+is pinned near 1.0.
+
+The explicit phase-argument form (`compressibility(c, :gas/:liquid/:solid)`)
+returns thermo's **curve-based** per-phase value (`Zg`/`Zl`/`Zs`); this is not
+EOS-derived and may sit near 1.0 for a `Species`. It therefore need not equal
+the no-argument result, which is EOS-derived for a gas-phase `Species`.
+"""
+compressibility(c::Mixture) = pyconvert(Float64, Py(c).Z)
+
+function compressibility(c::Species)
+    if pyconvert(String, Py(c).phase) == "g"
+        # Refresh the cached EOS at the current T/P before reading `Z_g` — see
+        # `soundspeed` below for why direct `c.T = …` / `c.calculate(...)`
+        # mutations do not rebuild the EOS object.
+        Py(c).set_eos(T=Py(c).T, P=Py(c).P)
+        eos = Py(c).eos
+        pyhasattr(eos, "Z_g") && return pyconvert(Float64, eos.Z_g)
+    end
+    # Fallback: thermo's curve-based Z (pinned near 1.0 for a Species).
+    pyconvert(Float64, Py(c).Z)
+end
+
+function compressibility(c::Chemical, phase::Symbol)
+    attr = _phase_attr(:compressibility, phase, (gas=:Zg, liquid=:Zl, solid=:Zs))
+    _wrap_strict(pygetattr(Py(c), String(attr)), NoUnits)
+end
+
+"""
     soundspeed(c::Chemical) -> Quantity{m/s}
 
 Real-gas sound speed at the chemical's current state.

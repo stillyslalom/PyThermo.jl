@@ -22,6 +22,11 @@ Describes one curated Julian property accessor.
                   `(gas = :rhog, liquid = :rhol, solid = :rhos)`.
 * `doc`         — short docstring fragment used as the first line of the
                   generated docstring.
+
+!!! warning "Not part of the public API"
+    `PropSpec` is documented so downstream packages can read the field
+    layout, but it is an implementation detail. Its fields and type
+    parameters may change in any release without a breaking-version bump.
 """
 struct PropSpec{U<:Unitful.Units, P<:Union{Nothing, NamedTuple}}
     name::Symbol
@@ -60,6 +65,12 @@ Define a curated Julian accessor that forwards to a Python attribute on a
   like `(gas=:rhog, liquid=:rhol, solid=:rhos)`. When provided, a second
   method dispatching on `(::Chemical, ::Symbol)` is also emitted.
 * `doc` is a short docstring fragment used as the function summary.
+
+!!! warning "Not part of the public API"
+    This macro is documented for reference, but its argument signature is an
+    implementation detail and may change in any release without a
+    breaking-version bump. Downstream packages that build their own wrappers
+    on it do so at their own risk.
 """
 macro thermo_property(name, pyattr, unit, optional, phase_table, doc)
     name_sym   = name isa QuoteNode ? name.value : name
@@ -68,7 +79,7 @@ macro thermo_property(name, pyattr, unit, optional, phase_table, doc)
 
     base_method = quote
         function $(esc(name_sym))(c::Chemical)
-            $wrap(pygetattr(Py(c), $(string(pyattr_sym))), $(esc(unit)))
+            $wrap(pygetattr(Py(c), $(String(pyattr_sym))), $(esc(unit)))
         end
     end
 
@@ -155,9 +166,10 @@ Molar density at the chemical's current state.
 Molar volume at the chemical's current state.
 """
 
-@thermo_property compressibility Z NoUnits false (gas=:Zg, liquid=:Zl, solid=:Zs) """
-Compressibility factor `Z = PV/(nRT)` at the chemical's current state. Dimensionless.
-"""
+# `compressibility` is hand-written in PyThermo.jl (next to `soundspeed`)
+# rather than macro-generated: the no-argument `Species` call reads the
+# real-gas `Z` from the attached cubic EOS, which the plain attribute forward
+# (`Chemical.Z`, curve-based and pinned near 1.0) cannot provide.
 
 # --- Caloric (strict) ---
 
@@ -308,6 +320,7 @@ string.
 """
 function phase(c::Chemical)
     p = pyconvert(Union{String, Nothing}, Py(c).phase)
+    p === nothing && error("thermo reported no phase (got `nothing`)")
     p == "g" ? :gas    :
     p == "l" ? :liquid :
     p == "s" ? :solid  :

@@ -57,8 +57,6 @@ end
         @test unit(density(N2))               == u"kg/m^3"
         @test unit(molar_density(N2))         == u"mol/m^3"
         @test unit(molar_volume(N2))          == u"m^3/mol"
-        @test compressibility(N2) isa Float64
-        @test isapprox(compressibility(N2), 1.0, atol=0.05)
 
         @test unit(heat_capacity(N2))         == u"J/(kg*K)"
         @test unit(molar_heat_capacity(N2))   == u"J/(mol*K)"
@@ -80,6 +78,24 @@ end
         @test unit(joule_thomson(N2))         == u"K/Pa"
     end
 
+    @testset "Compressibility (real-gas EOS path)" begin
+        # No-argument Species compressibility reads the real-gas factor from
+        # the attached cubic EOS, not the curve-based `Chemical.Z` (pinned at
+        # 1.0). N2 at 1 atm is near-ideal; SF6 at 10 atm must deviate
+        # appreciably from 1.0 to prove the EOS path is actually exercised.
+        @test compressibility(N2) isa Float64
+        @test isapprox(compressibility(N2), 1.0, atol=0.02)
+
+        SF6 = Species("SF6", T=300u"K", P=10u"atm")
+        Z = compressibility(SF6)
+        @test Z isa Float64
+        @test Z < 0.95               # curve-based Z would be ~1.0
+        @test isapprox(Z, 0.867, atol=0.03)
+
+        # Mixtures forward to thermo's EOS-aware Z.
+        @test compressibility(Mixture(["N2" => 0.78, "O2" => 0.22])) isa Float64
+    end
+
     @testset "Phase-argument dispatch (gas)" begin
         # No-phase call equals :gas variant for a gas-phase chemical.
         for f in (density, molar_density, molar_volume, heat_capacity,
@@ -88,8 +104,9 @@ end
                   isobaric_expansion, joule_thomson)
             @test isapprox(ustrip(f(N2)), ustrip(f(N2, :gas)); rtol=1e-10)
         end
-        # Compressibility is dimensionless; compare bare floats.
-        @test isapprox(compressibility(N2), compressibility(N2, :gas); rtol=1e-10)
+        # `compressibility` is deliberately excluded: the no-argument Species
+        # call is EOS-derived (`eos.Z_g`) while the explicit `:gas` variant is
+        # thermo's curve-based `Zg`, so the two need not agree.
     end
 
     @testset "Phase-argument dispatch (unsupported)" begin
