@@ -24,7 +24,7 @@ export Thermo, ShockTube
 export Species, Mixture
 export temperature, pressure, isentropic_exponent, R_specific, soundspeed
 export density, molar_density, molar_volume, compressibility
-export heat_capacity, molar_heat_capacity
+export heat_capacity, molar_heat_capacity, isochoric_heat_capacity, molar_isochoric_heat_capacity
 export enthalpy, molar_enthalpy, entropy, molar_entropy, internal_energy, molar_internal_energy
 export viscosity, kinematic_viscosity, thermal_conductivity, thermal_diffusivity, prandtl, surface_tension
 export isobaric_expansion, joule_thomson

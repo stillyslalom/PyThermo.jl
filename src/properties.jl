@@ -181,6 +181,24 @@ Isobaric specific heat capacity (mass basis) at the chemical's current state.
 Isobaric molar heat capacity at the chemical's current state.
 """
 
+# Constant-volume heat capacity is gas-phase only: thermo exposes `Cvg` /
+# `Cvgm` but no current-phase, liquid, or solid constant-volume variants, so
+# these accessors take no phase argument and always return the gas-phase value.
+
+@thermo_property isochoric_heat_capacity Cvg u"J/(kg*K)" false nothing """
+Isochoric (constant-volume) specific heat capacity (mass basis).
+
+Gas-phase only: thermo exposes no current-phase, liquid, or solid
+constant-volume heat capacity, so this always forwards to the gas-phase value
+(`Cvg`) regardless of the chemical's actual phase.
+"""
+
+@thermo_property molar_isochoric_heat_capacity Cvgm u"J/(mol*K)" false nothing """
+Isochoric (constant-volume) molar heat capacity.
+
+Gas-phase only; see [`isochoric_heat_capacity`](@ref) for the phase caveat.
+"""
+
 @thermo_property enthalpy H u"J/kg" false nothing """
 Specific enthalpy (mass basis) at the chemical's current state, relative to thermo's
 internal reference state.

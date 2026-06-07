@@ -109,9 +109,13 @@ Format: `julian_name` ← `pyattr` (unit, optional?, phase variants if any)
 - `molar_entropy` ← `Sm` (J/(mol·K))
 - `internal_energy` ← `U` (J/kg)
 - `molar_internal_energy` ← `Um` (J/mol)
+- `isochoric_heat_capacity` ← `Cvg` (J/(kg·K)) — gas-phase only, no phase argument
+- `molar_isochoric_heat_capacity` ← `Cvgm` (J/(mol·K)) — gas-phase only, no phase argument
 
-Note: thermo does not expose a `Cv` (mass-basis ideal-gas Cv) on Chemical — only `Cvg` and
-`Cvgm`. Skip plain `heat_capacity_v`; defer to KitchenSink if needed.
+Note: thermo does not expose a current-phase, liquid, or solid `Cv` on Chemical — only the
+gas-phase `Cvg` / `Cvgm`. These were initially deferred; they were later added (post-PR 3)
+as the gas-phase-only `isochoric_heat_capacity` / `molar_isochoric_heat_capacity` accessors,
+which take no phase argument since no other phase variant exists.
 
 ### Transport (strict)
 - `viscosity` ← `mu` (Pa·s); phases: `:gas`→`mug`, `:liquid`→`mul` (no `:solid`)

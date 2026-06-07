@@ -60,6 +60,12 @@ end
 
         @test unit(heat_capacity(N2))         == u"J/(kg*K)"
         @test unit(molar_heat_capacity(N2))   == u"J/(mol*K)"
+        @test unit(isochoric_heat_capacity(N2))       == u"J/(kg*K)"
+        @test unit(molar_isochoric_heat_capacity(N2)) == u"J/(mol*K)"
+        # Ideal-gas relation: Cp_m - Cv_m ≈ R, and Cv < Cp.
+        @test isapprox(ustrip(u"J/(mol*K)",
+            molar_heat_capacity(N2) - molar_isochoric_heat_capacity(N2)), 8.314, atol=0.1)
+        @test molar_isochoric_heat_capacity(N2) < molar_heat_capacity(N2)
         @test unit(enthalpy(N2))              == u"J/kg"
         @test unit(molar_enthalpy(N2))        == u"J/mol"
         @test unit(entropy(N2))               == u"J/(kg*K)"
@@ -127,6 +133,8 @@ end
         @test_throws MethodError surface_tension(N2, :gas)
         @test_throws MethodError enthalpy(N2, :gas)
         @test_throws MethodError molar_internal_energy(N2, :gas)
+        @test_throws MethodError isochoric_heat_capacity(N2, :gas)
+        @test_throws MethodError molar_isochoric_heat_capacity(N2, :gas)
     end
 
     @testset "Surface tension (liquid)" begin

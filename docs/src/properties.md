@@ -66,6 +66,8 @@ phase
 ```@docs
 heat_capacity
 molar_heat_capacity
+isochoric_heat_capacity
+molar_isochoric_heat_capacity
 enthalpy
 molar_enthalpy
 entropy
@@ -152,6 +154,8 @@ argument for the no-suffix accessor.
 |-------------------------------------------|------------------------------------|------------|
 | `Cp` / `Cpg` / `Cpl` / `Cps`              | `heat_capacity(c[, phase])`        | J/(kg·K)   |
 | `Cpm` / `Cpgm` / `Cplm` / `Cpsm`          | `molar_heat_capacity(c[, phase])`  | J/(mol·K)  |
+| `Cvg` *(gas only)*                        | `isochoric_heat_capacity(c)`       | J/(kg·K)   |
+| `Cvgm` *(gas only)*                       | `molar_isochoric_heat_capacity(c)` | J/(mol·K)  |
 | `H`                                       | `enthalpy(c)`                      | J/kg       |
 | `Hm`                                      | `molar_enthalpy(c)`                | J/mol      |
 | `S`                                       | `entropy(c)`                       | J/(kg·K)   |
