@@ -11,8 +11,10 @@ Documentation for [PyThermo](https://github.com/stillyslalom/PyThermo.jl).
 
 ```@docs
 Species
-Mixture
 ```
+
+`Mixture` and the ways to construct and combine mixtures are covered on the
+[Mixtures](@ref) page.
 
 ## Interaction with Conda
 PyThermo's Python dependencies are managed by CondaPkg.jl, which registers

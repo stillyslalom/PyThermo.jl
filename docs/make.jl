@@ -18,6 +18,7 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Mixtures" => "mixtures.md",
         "Properties" => "properties.md",
         "ShockTube" => "shocktube.md",
     ],

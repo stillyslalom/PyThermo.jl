@@ -61,6 +61,10 @@ compressibility
 phase
 ```
 
+`phase` returns `:gas`, `:liquid`, `:solid`, or `:two_phase`. The last covers a
+coexisting-phase state, which a `Mixture` reaches when a flash lands inside a
+phase envelope (see [adiabatic mixing](@ref "Adiabatic mixing")).
+
 ## Caloric
 
 ```@docs
@@ -146,7 +150,7 @@ argument for the no-suffix accessor.
 | `rhom` / `rhogm` / `rholm` / `rhosm`      | `molar_density(c[, phase])`        | mol/m³     |
 | `Vm` / `Vmg` / `Vml` / `Vms`              | `molar_volume(c[, phase])`         | m³/mol     |
 | `Z` / `Zg` / `Zl` / `Zs` (see [`compressibility`](@ref)) | `compressibility(c[, phase])` | —          |
-| `phase`                                   | `phase(c)` *(returns `Symbol`)*    | —          |
+| `phase`                                   | `phase(c)` *(`:gas`/`:liquid`/`:solid`/`:two_phase`)* | — |
 
 ### Caloric
 
