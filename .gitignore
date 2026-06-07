@@ -5,3 +5,6 @@
 .CondaPkg/
 test/Manifest.toml
 snoop/*
+
+# Top-level scratch markdown (e.g. agent-generated plans/notes); docs/ stays tracked
+/*.md
