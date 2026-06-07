@@ -10,7 +10,10 @@ Handoff document. Self-contained. Read top-to-bottom before touching code.
 - **PR 2 (Bulk wrappers) — DONE.** All 20 wrappers shipped via the macro plus a
   56-case `@testset "Property accessors"`. See the "PR 2 retrospective"
   section below for the macro fix it surfaced and the doctest scope decision.
-- **PR 3 (Identity, composition, optionals, docs) — TODO.** Unchanged.
+- **PR 3 (Identity, composition, optionals, docs) — DONE.** All hand-written
+  accessors, optional constants, and the categorized docs page shipped. See
+  the "PR 3 retrospective" section below for the surprises that came up
+  during the docs build and the missing-value test design.
 
 ## Background
 
@@ -457,15 +460,77 @@ Three PRs, in order:
    `export …, …, …` blocks already introduced in PR 2 — they're easier to
    read and to extend than one long line.
 
-### PR 3 — Identity, composition, optionals, docs
-- Hand-written: `phase` (returns Symbol), `CAS`, `formula`, `mole_fractions`,
-  `mass_fractions`, `components`.
+### PR 3 — Identity, composition, optionals, docs ✅ DONE
+- Hand-written: `phase` (returns Symbol), `CAS`, `formula`, `molecular_weight`,
+  `mole_fractions`, `mass_fractions`, `components`.
 - Optional constants: `T_critical`, `P_critical`, `acentric_factor`, `T_boiling`,
   `enthalpy_vaporization`, `P_saturation`.
 - New docs page `docs/src/properties.md` — categorized API reference plus a
   thermo-name → Julian-name cheatsheet (essential for users coming from the Python lib's
   docs).
 - Register the new page in `docs/make.jl`.
+
+#### PR 3 retrospective
+
+1. **`_wrap_optional` worked first try.** PR 1 built the optional helper
+   without ever exercising it; PR 3 is the first use. The missing-value
+   path is covered by `enthalpy_vaporization(Species("He"))` at 298 K —
+   helium's Tc is ~5.2 K, so thermo's vaporization correlation returns
+   `None` and the wrapper converts that to `missing` as designed. No
+   adjustments to `_wrap_optional` were needed.
+
+2. **`phase` does not clash with `Base`.** Aqua's `test_all` passed with
+   the new export. There is no `Base.phase` (the complex-argument function
+   is `Base.angle`), so the natural name is free for our `:gas`/`:liquid`/
+   `:solid` Symbol accessor. Worth knowing if anyone adds more
+   short-named exports later — Aqua is the reliable check.
+
+3. **The docs build forced docstrings onto five long-undocumented
+   accessors.** Adding `@docs temperature pressure isentropic_exponent
+   R_specific soundspeed` to the new properties page surfaced that those
+   five — all hand-written and predating PR 1 — had never had docstrings.
+   Documenter's `:missing_docs` check turned that into a build error. PR 3
+   landed short docstrings on each as part of the same change. The
+   `soundspeed` docstring documents the EOS-derived gas-phase formula plus
+   the ideal-gas fallback path established in PR 1; this is now the
+   canonical place that behavior is described to users.
+
+4. **`PropSpec` and `@thermo_property` are now documented public surface.**
+   Documenter's `:missing_docs` check also flagged the macro internals
+   (PR 1 had written full docstrings on them but they were not referenced
+   from any manual page). Rather than demoting the check to a warning, the
+   properties page now has a short "Internals" section that includes both
+   via `@docs`. The implication is that future refactors to `PropSpec`'s
+   field layout or the macro's argument signature are now semver-relevant
+   for any downstream package that uses them to define its own wrappers.
+
+5. **Optional-constant tests pin presence and absence both.** N2 covers
+   `T_critical`, `P_critical`, `acentric_factor`, `T_boiling`; liquid
+   water at 300 K covers `enthalpy_vaporization` and `P_saturation`; He at
+   298 K covers the `missing` return. That's enough coverage to lock in
+   both the strict-quantity and `missing` branches of `_wrap_optional`.
+   Numerical tolerances are deliberately loose (rtol up to 10 %) since the
+   point is to verify the wrapper plumbing, not to validate thermo's
+   correlations.
+
+6. **`molecular_weight` lives with the hand-written identity accessors.**
+   The plan put `MW` in the "Identity (Species; hand-written)" group but
+   it works just as well on `Mixture` (mole-fraction-weighted MW). The
+   wrapper is `(c::Chemical)`, hand-written, returning `g/mol` (thermo's
+   native unit for `MW`, not kg/mol).
+
+7. **README cleanup replaced both TODOs.** The "Add Unitful accessors for
+   more properties" and "Use `missing` instead of `nothing`" entries from
+   the Future Development checklist are both delivered by PR 3 / the
+   curated layer as a whole. The README now points at the new properties
+   docs page rather than just deleting the items.
+
+8. **No KitchenSink work was attempted.** The plan's KitchenSink submodule
+   (re-exporting Parachor, solubility parameter, dimensionless-number
+   helpers, safety/hazard constants, structural predicates) remains
+   future work. The curated layer is now complete enough that the
+   `getproperty` fallthrough plus the cheatsheet table can carry users
+   through anything not exposed as a curated accessor.
 
 ## What NOT to do
 
