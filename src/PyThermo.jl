@@ -22,7 +22,12 @@ import Base: convert, ==, isequal, hash, getindex, setindex!, haskey, keys, show
 
 export Thermo, ShockTube
 export Species, Mixture
-export isentropic_exponent, temperature, pressure, density, molar_density, R_specific, soundspeed
+export temperature, pressure, isentropic_exponent, R_specific, soundspeed
+export density, molar_density, molar_volume, compressibility
+export heat_capacity, molar_heat_capacity
+export enthalpy, molar_enthalpy, entropy, molar_entropy, internal_energy, molar_internal_energy
+export viscosity, kinematic_viscosity, thermal_conductivity, thermal_diffusivity, prandtl, surface_tension
+export isobaric_expansion, joule_thomson
 export setstate!
 
 include("init.jl")
@@ -206,12 +211,13 @@ Base.setproperty!(c::Chemical, s::Symbol, T::Unitful.Pressure) = setproperty!(Py
 
 include("properties.jl")
 
-# Thermodynamic property accessors
-temperature(c::Chemical)  = c.T * u"K"
-pressure(c::Chemical)  = c.P * u"Pa"
-density(c::Chemical)  = c.rho * u"kg/m^3"
-molar_density(c::Chemical) = c.rhom * u"mol/m^3"
-isentropic_exponent(c::Chemical)  = c.isentropic_exponent
+# Thermodynamic property accessors. The bulk of these are macro-generated in
+# `properties.jl`; the four below are kept hand-written because they don't
+# need pyconvert plumbing (`T`/`P` already come back as `Float64`) or because
+# their natural form is the bare dimensionless number returned by Python.
+temperature(c::Chemical) = c.T * u"K"
+pressure(c::Chemical)    = c.P * u"Pa"
+isentropic_exponent(c::Chemical) = c.isentropic_exponent
 R_specific(c::Chemical)  = c.R_specific * u"J/(kg*K)"
 
 # Real-gas sound speed.

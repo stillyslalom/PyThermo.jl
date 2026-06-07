@@ -50,6 +50,93 @@ end
     @test isapprox(ustrip(u"m/s", soundspeed(air)), 346.1, rtol=5e-3)
 end
 
+@testset "Property accessors" begin
+    N2 = Species("N2", T=300u"K", P=1u"atm")
+
+    @testset "Units (strict, gas-phase)" begin
+        @test unit(density(N2))               == u"kg/m^3"
+        @test unit(molar_density(N2))         == u"mol/m^3"
+        @test unit(molar_volume(N2))          == u"m^3/mol"
+        @test compressibility(N2) isa Float64
+        @test isapprox(compressibility(N2), 1.0, atol=0.05)
+
+        @test unit(heat_capacity(N2))         == u"J/(kg*K)"
+        @test unit(molar_heat_capacity(N2))   == u"J/(mol*K)"
+        @test unit(enthalpy(N2))              == u"J/kg"
+        @test unit(molar_enthalpy(N2))        == u"J/mol"
+        @test unit(entropy(N2))               == u"J/(kg*K)"
+        @test unit(molar_entropy(N2))         == u"J/(mol*K)"
+        @test unit(internal_energy(N2))       == u"J/kg"
+        @test unit(molar_internal_energy(N2)) == u"J/mol"
+
+        @test unit(viscosity(N2))             == u"Pa*s"
+        @test unit(kinematic_viscosity(N2))   == u"m^2/s"
+        @test unit(thermal_conductivity(N2))  == u"W/(m*K)"
+        @test unit(thermal_diffusivity(N2))   == u"m^2/s"
+        @test prandtl(N2) isa Float64
+        @test 0 < prandtl(N2) < 10
+
+        @test unit(isobaric_expansion(N2))    == u"K^-1"
+        @test unit(joule_thomson(N2))         == u"K/Pa"
+    end
+
+    @testset "Phase-argument dispatch (gas)" begin
+        # No-phase call equals :gas variant for a gas-phase chemical.
+        for f in (density, molar_density, molar_volume, heat_capacity,
+                  molar_heat_capacity, viscosity, kinematic_viscosity,
+                  thermal_conductivity, thermal_diffusivity, prandtl,
+                  isobaric_expansion, joule_thomson)
+            @test isapprox(ustrip(f(N2)), ustrip(f(N2, :gas)); rtol=1e-10)
+        end
+        # Compressibility is dimensionless; compare bare floats.
+        @test isapprox(compressibility(N2), compressibility(N2, :gas); rtol=1e-10)
+    end
+
+    @testset "Phase-argument dispatch (unsupported)" begin
+        # Phase tables that omit :solid throw a clear ArgumentError, not a
+        # cryptic PyException from a missing attribute.
+        @test_throws ArgumentError viscosity(N2, :solid)
+        @test_throws ArgumentError kinematic_viscosity(N2, :solid)
+        @test_throws ArgumentError thermal_conductivity(N2, :solid)
+        @test_throws ArgumentError thermal_diffusivity(N2, :solid)
+        @test_throws ArgumentError prandtl(N2, :solid)
+        @test_throws ArgumentError isobaric_expansion(N2, :solid)
+        @test_throws ArgumentError joule_thomson(N2, :solid)
+        # Bogus phase is rejected too.
+        @test_throws ArgumentError density(N2, :bogus)
+
+        # Wrappers with no phase table reject the two-argument call entirely
+        # (MethodError, since no such method exists).
+        @test_throws MethodError surface_tension(N2, :gas)
+        @test_throws MethodError enthalpy(N2, :gas)
+        @test_throws MethodError molar_internal_energy(N2, :gas)
+    end
+
+    @testset "Surface tension (liquid)" begin
+        water = Species("water", T=300u"K", P=1u"atm")
+        st = surface_tension(water)
+        @test unit(st) == u"N/m"
+        # Water surface tension at 300 K is roughly 0.072 N/m.
+        @test isapprox(ustrip(u"N/m", st), 0.072, atol=0.01)
+    end
+
+    @testset "Mixture compatibility" begin
+        air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01])
+        @test unit(density(air))              == u"kg/m^3"
+        @test unit(molar_volume(air))         == u"m^3/mol"
+        @test unit(heat_capacity(air))        == u"J/(kg*K)"
+        @test unit(molar_enthalpy(air))       == u"J/mol"
+        @test unit(viscosity(air))            == u"Pa*s"
+        @test unit(thermal_conductivity(air)) == u"W/(m*K)"
+        @test prandtl(air) isa Float64
+
+        # Phase-positional overload works on mixtures too.
+        @test isapprox(ustrip(density(air, :gas)), ustrip(density(air)); rtol=1e-10)
+        @test isapprox(ustrip(heat_capacity(air, :gas)),
+                       ustrip(heat_capacity(air)); rtol=1e-10)
+    end
+end
+
 @testset "setstate!" begin
     SF6 = Species("SF6")
     @test SF6.phase == "g"

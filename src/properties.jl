@@ -85,10 +85,16 @@ macro thermo_property(name, pyattr, unit, optional, phase_table, doc)
 
     doc_str = _build_property_docstring(name_sym, pyattr_sym, optional, phase_table, doc)
 
+    # `@doc "string" $(esc(name))` fails because the escape wrapper hides the
+    # binding from the documentation system. Splice the symbol literal into a
+    # `@doc` call and esc the whole macrocall so the name resolves against the
+    # caller's module.
+    doc_call = esc(:(Core.@doc $doc_str $name_sym))
+
     out = Expr(:block)
     push!(out.args, base_method)
     phase_method === nothing || push!(out.args, phase_method)
-    push!(out.args, :(@doc $(doc_str) $(esc(name_sym))))
+    push!(out.args, doc_call)
     return out
 end
 
@@ -125,3 +131,103 @@ function _build_property_docstring(name, pyattr, optional, phase_table, doc)
                   "Without a phase argument, forwards to `", pyattr, "`. ", opt_note,
                   phases, "\n")
 end
+
+# ---------------------------------------------------------------------------
+# Curated property wrappers
+#
+# Each `@thermo_property` invocation defines a Julian accessor that forwards
+# to a `thermo` Python attribute, attaches a Unitful unit, and (when a phase
+# table is supplied) also generates a `(c::Chemical, phase::Symbol)` method
+# that dispatches to the matching phase-suffixed attribute.
+# ---------------------------------------------------------------------------
+
+# --- State (strict) ---
+
+@thermo_property density rho u"kg/m^3" false (gas=:rhog, liquid=:rhol, solid=:rhos) """
+Mass density at the chemical's current state.
+"""
+
+@thermo_property molar_density rhom u"mol/m^3" false (gas=:rhogm, liquid=:rholm, solid=:rhosm) """
+Molar density at the chemical's current state.
+"""
+
+@thermo_property molar_volume Vm u"m^3/mol" false (gas=:Vmg, liquid=:Vml, solid=:Vms) """
+Molar volume at the chemical's current state.
+"""
+
+@thermo_property compressibility Z NoUnits false (gas=:Zg, liquid=:Zl, solid=:Zs) """
+Compressibility factor `Z = PV/(nRT)` at the chemical's current state. Dimensionless.
+"""
+
+# --- Caloric (strict) ---
+
+@thermo_property heat_capacity Cp u"J/(kg*K)" false (gas=:Cpg, liquid=:Cpl, solid=:Cps) """
+Isobaric specific heat capacity (mass basis) at the chemical's current state.
+"""
+
+@thermo_property molar_heat_capacity Cpm u"J/(mol*K)" false (gas=:Cpgm, liquid=:Cplm, solid=:Cpsm) """
+Isobaric molar heat capacity at the chemical's current state.
+"""
+
+@thermo_property enthalpy H u"J/kg" false nothing """
+Specific enthalpy (mass basis) at the chemical's current state, relative to thermo's
+internal reference state.
+"""
+
+@thermo_property molar_enthalpy Hm u"J/mol" false nothing """
+Molar enthalpy at the chemical's current state, relative to thermo's internal reference state.
+"""
+
+@thermo_property entropy S u"J/(kg*K)" false nothing """
+Specific entropy (mass basis) at the chemical's current state, relative to thermo's
+internal reference state.
+"""
+
+@thermo_property molar_entropy Sm u"J/(mol*K)" false nothing """
+Molar entropy at the chemical's current state, relative to thermo's internal reference state.
+"""
+
+@thermo_property internal_energy U u"J/kg" false nothing """
+Specific internal energy (mass basis) at the chemical's current state, relative to thermo's
+internal reference state.
+"""
+
+@thermo_property molar_internal_energy Um u"J/mol" false nothing """
+Molar internal energy at the chemical's current state, relative to thermo's internal reference state.
+"""
+
+# --- Transport (strict) ---
+
+@thermo_property viscosity mu u"Pa*s" false (gas=:mug, liquid=:mul) """
+Dynamic viscosity at the chemical's current state.
+"""
+
+@thermo_property kinematic_viscosity nu u"m^2/s" false (gas=:nug, liquid=:nul) """
+Kinematic viscosity (μ / ρ) at the chemical's current state.
+"""
+
+@thermo_property thermal_conductivity k u"W/(m*K)" false (gas=:kg, liquid=:kl) """
+Thermal conductivity at the chemical's current state.
+"""
+
+@thermo_property thermal_diffusivity alpha u"m^2/s" false (gas=:alphag, liquid=:alphal) """
+Thermal diffusivity (k / (ρ Cp)) at the chemical's current state.
+"""
+
+@thermo_property prandtl Pr NoUnits false (gas=:Prg, liquid=:Prl) """
+Prandtl number (Cp μ / k) at the chemical's current state. Dimensionless.
+"""
+
+@thermo_property surface_tension sigma u"N/m" false nothing """
+Liquid-vapor surface tension at the chemical's current state.
+"""
+
+# --- Derived (strict) ---
+
+@thermo_property isobaric_expansion isobaric_expansion u"K^-1" false (gas=:isobaric_expansion_g, liquid=:isobaric_expansion_l) """
+Isobaric expansion coefficient β = (1/V)(∂V/∂T)_P at the chemical's current state.
+"""
+
+@thermo_property joule_thomson JT u"K/Pa" false (gas=:JTg, liquid=:JTl) """
+Joule-Thomson coefficient μ_JT = (∂T/∂P)_H at the chemical's current state.
+"""

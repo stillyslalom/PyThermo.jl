@@ -7,9 +7,9 @@ Handoff document. Self-contained. Read top-to-bottom before touching code.
 - **PR 1 (Infrastructure) — DONE.** Landed on `main` as a single commit. See the
   "PR 1 retrospective" section below for what shipped, what was discovered
   along the way, and what those discoveries mean for PR 2/3.
-- **PR 2 (Bulk wrappers) — TODO.** Plan unchanged in scope; read the
-  retrospective for the EOS-staleness gotcha that will affect any wrapper that
-  reads from `Py(c).eos.*`.
+- **PR 2 (Bulk wrappers) — DONE.** All 20 wrappers shipped via the macro plus a
+  56-case `@testset "Property accessors"`. See the "PR 2 retrospective"
+  section below for the macro fix it surfaced and the doctest scope decision.
 - **PR 3 (Identity, composition, optionals, docs) — TODO.** Unchanged.
 
 ## Background
@@ -388,7 +388,7 @@ Three PRs, in order:
    the macro is wrong (e.g. docstring generation, phase dispatch), PR 2
    will discover it.
 
-### PR 2 — Bulk wrappers
+### PR 2 — Bulk wrappers ✅ DONE
 - All entries in the property table above except those handled in PR 3.
 - Specifically: state (other than already-exposed temperature/pressure/density/
   molar_density), caloric, transport, derived (isobaric_expansion, joule_thomson).
@@ -397,6 +397,65 @@ Three PRs, in order:
 - Doctests on every wrapper using the existing `_DOCTEST` setup (src/PyThermo.jl:43).
 - Extend `test/runtests.jl` with a `@testset "Property accessors"` block covering
   unit-correctness and phase-argument dispatch.
+
+#### PR 2 retrospective — read this before PR 3
+
+1. **The macro's `@doc` emission was broken.** As PR 1 retro point 8
+   anticipated, the first real use of `@thermo_property` blew up at
+   precompile with `cannot document the following expression:
+   $(Expr(:escape, :density))`. The original emission was
+   `:(@doc $doc_str $(esc(name_sym)))`, but `@doc` doesn't accept an escaped
+   symbol — it can't resolve the binding through the escape wrapper. Fixed
+   by splicing the bare symbol into a `Core.@doc` call and escaping the
+   whole macrocall: `esc(:(Core.@doc $doc_str $name_sym))`. PR 3 doesn't
+   need to touch this again.
+
+2. **EOS-staleness review for `isobaric_expansion` / `joule_thomson` came
+   back clean.** Per chemical.py:2503,2525 (`VolumeLiquid` /
+   `VolumeGas` `TP_dependent_property_derivative_T`) and 2688,2713 (`JTl` /
+   `JTg` built on `Vml`/`Vmg` + `Cplm`/`Cpgm` + `isobaric_expansion_l`/`_g`),
+   neither wrapper resolves to an `eos.*` derivative. The plain macro
+   forward (no `set_eos` refresh) is correct.
+
+3. **Doctest scope was reduced from the plan.** The plan called for
+   `jldoctest` blocks on every wrapper using `$_DOCTEST` interpolation, but
+   the macro builds its docstring at macro-expansion time as a static
+   String, which doesn't permit `$_DOCTEST` interpolation from the caller's
+   scope. Two cheap options exist if/when PR 3 wants to bring doctests
+   back:
+   - Switch `_build_property_docstring` to return an `Expr(:string, ...)`
+     so the user's `doc` arg (which can contain `$_DOCTEST`) is assembled
+     at runtime in the caller's scope.
+   - Or use `raw"""..."""` for each wrapper's `doc` arg and spell the
+     `jldoctest pythermo; setup = ..., filter = ...` header literally.
+
+   Coverage-wise, the 56-case `@testset "Property accessors"` exercises
+   every wrapper for unit correctness, phase dispatch, and unsupported-phase
+   `ArgumentError`, so correctness is locked in regardless of which path
+   PR 3 picks.
+
+4. **`compressibility` is currently flat at 1.0 for `Species`.** This is
+   the same caveat called out in PR 1 retro point 2 (`Chemical.Z` is
+   curve-based, not EOS-based). The wrapper returns whatever `thermo`
+   returns, so a real-gas `Z` is only meaningful via `Mixture` or, in
+   future, via an EOS-derived KitchenSink accessor. The plan's first-pass
+   scope is fine — just don't be surprised by `compressibility(Species("SF6"))
+   ≈ 1.0`.
+
+5. **Mixture caloric properties (`H`, `Hm`, `S`, `Sm`, `U`, `Um`) depend on
+   a successful caloric flash.** Per mixture.py:559-560,968-989, these are
+   `None` until the property package fills them in during
+   `flash_caloric`. They are populated for the default state of common
+   mixtures (air, the README He/Acetone mix) so PR 2 tests don't exercise
+   the failure mode — but if PR 3 adds optional-constant wrappers, keep in
+   mind that the strict caloric wrappers can legitimately raise on
+   exotic mixtures whose property package skipped the caloric step.
+
+6. **Export list grew significantly.** PR 2 added 18 new exported names
+   to `src/PyThermo.jl`. PR 3 adds another ~9 (identity, composition,
+   optional constants). Worth keeping the categorized
+   `export …, …, …` blocks already introduced in PR 2 — they're easier to
+   read and to extend than one long line.
 
 ### PR 3 — Identity, composition, optionals, docs
 - Hand-written: `phase` (returns Symbol), `CAS`, `formula`, `mole_fractions`,
