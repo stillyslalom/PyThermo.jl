@@ -23,6 +23,81 @@ using Aqua
     end
 end
 
+@testset "Combining mixtures" begin
+    air = Mixture(["N2" => 0.79, "O2" => 0.21])
+
+    @testset "Composition merge" begin
+        m = Mixture([air => 0.8, Species("acetone") => 0.2])
+        @test components(m) |> length == 3
+        zs = mole_fractions(m)
+        @test isapprox(zs[1], 0.79 * 0.8; atol = 1e-9)   # N2
+        @test isapprox(zs[2], 0.21 * 0.8; atol = 1e-9)   # O2
+        @test isapprox(zs[3], 0.2;        atol = 1e-9)   # acetone
+        @test isapprox(sum(zs), 1.0; atol = 1e-9)
+        # Built at STP by default, constituent states ignored.
+        @test isapprox(m.T, 298.15; rtol = 1e-9)
+
+        # Amounts are relative — scaling them leaves the composition unchanged.
+        m10 = Mixture([air => 8.0, Species("acetone") => 2.0])
+        @test isapprox(mole_fractions(m10), zs; atol = 1e-9)
+
+        # A bare string is treated as Species(name): mixed lists match.
+        @test isapprox(mole_fractions(Mixture([air => 0.8, "acetone" => 0.2])),
+                       zs; atol = 1e-9)
+    end
+
+    @testset "CAS merge dedups shared species" begin
+        # air already contains N2; adding more N2 must merge, not duplicate.
+        m = Mixture([air => 0.5, Species("N2") => 0.5])
+        @test length(components(m)) == 2
+        zs = mole_fractions(m)
+        @test isapprox(zs[1], 0.79 * 0.5 + 0.5; atol = 1e-9)  # merged N2
+        @test isapprox(zs[2], 0.21 * 0.5;       atol = 1e-9)  # O2
+    end
+
+    @testset "String-only list matches classic constructor" begin
+        a = mole_fractions(Mixture([Species("N2") => 0.79, Species("O2") => 0.21]))
+        b = mole_fractions(Mixture(["N2" => 0.79, "O2" => 0.21]))
+        @test isapprox(a, b; atol = 1e-9)
+    end
+
+    @testset "Adiabatic — evaporative cooling" begin
+        # Room-temperature liquid acetone evaporating into air cools the result
+        # below 298 K and leaves a two-phase state (latent heat is captured).
+        mix = Mixture([air => 0.85, Species("acetone") => 0.15]; adiabatic = true)
+        @test temperature(mix) < 298.15u"K"
+        @test isapprox(ustrip(u"K", temperature(mix)), 263.0; atol = 2.0)
+        @test phase(mix) === :two_phase
+    end
+
+    @testset "Adiabatic — sensible-heat balance" begin
+        # Equal moles of Ar at 300 K and N2 at 500 K: the equilibrium sits
+        # between, Cp-weighted toward the higher-Cp diatomic (~417 K).
+        ar = Species("Ar", T = 300u"K"); n2 = Species("N2", T = 500u"K")
+        m  = Mixture([ar => 0.5, n2 => 0.5]; adiabatic = true)
+        T  = ustrip(u"K", temperature(m))
+        @test 300 < T < 500
+        @test isapprox(T, 417.0; atol = 5.0)
+        @test phase(m) === :gas
+
+        # Pressure is inherited when constituents agree.
+        @test isapprox(m.P, 101325.0; rtol = 1e-6)
+    end
+
+    @testset "Error paths" begin
+        # Can't specify T when the adiabatic flash solves for it.
+        @test_throws ArgumentError Mixture([air => 0.5, Species("acetone") => 0.5];
+                                            adiabatic = true, T = 300)
+        # A failed enthalpy flash (helium has no usable enthalpy-flash data)
+        # surfaces as an ArgumentError, not a cryptic conversion error.
+        @test_throws ArgumentError Mixture([Species("He") => 0.5,
+                                            Species("N2") => 0.5]; adiabatic = true)
+        # Non-positive amounts and unsupported key types are rejected.
+        @test_throws ArgumentError Mixture([air => -0.5])
+        @test_throws ArgumentError Mixture(Pair[3.0 => 0.5])
+    end
+end
+
 @testset "soundspeed (real-gas)" begin
     # Ideal-gas consistency: near-ideal species should match the √(γ R T) formula
     # within 1% at low pressure.

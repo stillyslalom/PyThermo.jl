@@ -333,8 +333,11 @@ formula(s::Species) = pyconvert(String, Py(s).formula)
     phase(c::Chemical) -> Symbol
 
 Aggregate phase at the chemical's current state — one of `:gas`, `:liquid`,
-`:solid`. Throws `ErrorException` if thermo returns an unrecognized phase
-string.
+`:solid`, or `:two_phase`. The last is returned for any coexisting-phase state
+(thermo strings such as `"l/g"`), which a `Mixture` reaches when a flash lands
+inside a phase envelope — e.g. the cooled result of adiabatic mixing (see
+[`Mixture`](@ref)). Throws `ErrorException` if thermo returns an unrecognized
+phase string.
 """
 function phase(c::Chemical)
     p = pyconvert(Union{String, Nothing}, Py(c).phase)
@@ -342,7 +345,8 @@ function phase(c::Chemical)
     p == "g" ? :gas    :
     p == "l" ? :liquid :
     p == "s" ? :solid  :
-    error("unknown phase $(repr(p)) — expected \"g\", \"l\", or \"s\"")
+    occursin('/', p) ? :two_phase :  # coexisting phases, e.g. "l/g"
+    error("unknown phase $(repr(p)) — expected \"g\", \"l\", \"s\", or a coexisting-phase string like \"l/g\"")
 end
 
 # --- Composition (Mixture-only, hand-written) ---

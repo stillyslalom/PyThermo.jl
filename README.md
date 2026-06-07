@@ -28,6 +28,31 @@ julia> air.Cp
 1004.1326426200408
 ```
 
+### Combining mixtures and species
+
+A `Mixture` can be assembled from existing `Species`, other `Mixture`s, or
+chemical-name strings, given as `constituent => amount` pairs. Amounts are
+relative mole numbers (they need not sum to one), and a species appearing in
+more than one constituent is merged by CAS number.
+```julia
+julia> air = Mixture(["N2" => 0.79, "O2" => 0.21]);
+
+julia> Mixture([air => 0.8, Species("acetone") => 0.2])
+Mixture(63.2% N2, 16.8% O2, 20% acetone, 298.1 K, 1.013e+05 Pa)
+```
+By default the result is built at STP (override with `T=`/`P=`), using only the
+constituents' composition. Passing `adiabatic=true` instead conserves enthalpy
+at constant pressure, solving for the equilibrium temperature and accounting
+for heat capacity and latent heat — so mixing room-temperature *liquid* acetone
+into air evaporatively cools the result and leaves a two-phase state:
+```julia
+julia> mix = Mixture([air => 0.85, Species("acetone") => 0.15]; adiabatic=true)
+Mixture(67.2% N2, 17.8% O2, 15% acetone, 263.0 K, 1.013e+05 Pa)
+
+julia> phase(mix)
+:two_phase
+```
+
 State-dependent properties are updated for a given phase when the `T` or `P` fields are set, but in case of phase change, the state variables must be updated via the bound `calculate` method.
 ```julia
 julia> SF6 = Species("SF6", P=30u"psi")
