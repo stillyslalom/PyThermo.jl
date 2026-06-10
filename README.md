@@ -17,7 +17,7 @@ julia> density(argon)
 julia> argon.molecular_diameter # Angstrom
 3.40744
 ```
-If left unspecified, the pressure and temperature are set to STP. if given as `Float64` numbers, `P` and `T` must have units of Pascal and Kelvin, respectively. The state variables can also be set as `Unitful` quantities.
+The state variables can also be set as `Unitful` quantities. If specified as non-`Unitful` numbers, `P` and `T` must have units of Pascal and Kelvin, respectively. If left unspecified, the pressure and temperature are set to STP (298.15 K, 101325 Pa). 
 ```julia
 julia> using Unitful
 
