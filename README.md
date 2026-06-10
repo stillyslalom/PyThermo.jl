@@ -24,8 +24,8 @@ julia> using Unitful
 julia> air = Mixture(["N2" => 0.78, "O2" => 0.21, "Ar" => 0.01], P = 1u"atm")
 Mixture(78% N2, 21% O2, 1% Ar, 298.1 K, 1.013e+05 Pa)
 
-julia> air.Cp
-1004.3091399287284
+julia> heat_capacity(air)
+1004.3091399287284 J kg^-1 K^-1
 ```
 
 ### Combining mixtures and species
@@ -39,10 +39,10 @@ than one constituent is merged by CAS number.
 julia> air = Mixture(["N2" => 0.79, "O2" => 0.21]);
 
 julia> Mixture([air => 0.8, Species("acetone") => 0.2])
-Mixture(63.2% N2, 16.8% O2, 20% acetone, 298.1 K, 1.013e+05 Pa)
+Mixture(62.4% N2, 16.8% O2, 0.8% Ar, 20% acetone, 298.1 K, 1.013e+05 Pa)
 
 julia> Mixture([air => 0.8, Species("acetone") => 0.2]; basis=:mass)
-Mixture(70.3% N2, 18.7% O2, 11% acetone, 298.1 K, 1.013e+05 Pa)
+Mixture(69.4% N2, 18.7% O2, 0.889% Ar, 11.1% acetone, 298.1 K, 1.013e+05 Pa)
 ```
 By default the result is built at STP (override with `T=`/`P=`), using only the
 constituents' composition. Passing `adiabatic=true` instead conserves enthalpy
@@ -51,7 +51,7 @@ for heat capacity and latent heat — so mixing room-temperature *liquid* aceton
 into air evaporatively cools the result and leaves a two-phase state:
 ```julia
 julia> mix = Mixture([air => 0.85, Species("acetone") => 0.15]; adiabatic=true)
-Mixture(67.2% N2, 17.8% O2, 15% acetone, 263.0 K, 1.013e+05 Pa)
+Mixture(66.3% N2, 17.8% O2, 0.85% Ar, 15% acetone, 263.0 K, 1.013e+05 Pa)
 
 julia> phase(mix)
 :two_phase
@@ -88,7 +88,7 @@ PyThermo.jl is registered in Julia's general package repository and can be insta
 ```
 (v1.8) pkg> add PyThermo
    Resolving package versions...
-   Installed PyThermo ─ v0.2.0
+   Installed PyThermo ─ v0.4.0
 ```
 
 ### Curated accessors
